@@ -1,0 +1,46 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.snap,
+.tierSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.snap .select {
+  width: auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.tierSwitch {
+  margin-left: auto;
+}
+
+@media (max-width: 1100px) {
+  .tierSwitch {
+    margin-left: 0;
+  }
+}
+
+.angle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+
+.hint {
+  font-size: var(--t-small);
+  color: var(--muted);
+  min-height: 1.5em;
+}

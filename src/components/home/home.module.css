@@ -1,0 +1,104 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  max-width: 760px;
+}
+
+.inputRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.inputRow .btn {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .inputRow {
+    flex-direction: column;
+  }
+}
+
+.jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-top: 1px solid var(--rule-strong);
+  padding-top: 28px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 40px 0;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: var(--ink);
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 18px 16px;
+  text-decoration: none;
+  min-height: 150px;
+}
+
+.cardTitle {
+  font: 300 23px/1.15 var(--serif);
+  text-wrap: balance;
+}
+
+.cardMeta {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+
+.del {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font: 500 var(--t-label) / 1 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.card:hover .del,
+.del:focus-visible {
+  opacity: 1;
+}
+
+.del:hover {
+  color: var(--signal);
+}

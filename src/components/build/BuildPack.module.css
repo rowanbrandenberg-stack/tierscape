@@ -1,0 +1,54 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin: 0;
+  font-size: 14px;
+}
+
+.figures dt,
+.figures dd {
+  margin: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.figures dd {
+  text-align: right;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.dig {
+  padding: 18px;
+  background: var(--signal-wash);
+  border-radius: var(--r);
+}
+
+.dig .steps {
+  color: var(--ink);
+}
