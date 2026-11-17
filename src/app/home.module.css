@@ -1,0 +1,7 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: clamp(56px, 10vw, 128px) 0 clamp(48px, 7vw, 88px);
+  max-width: 920px;
+}

@@ -1,0 +1,421 @@
+/*
+ * Tierscape design system.
+ * Quiet paper and ink, a light serif for statements, a tight grotesk for work,
+ * mono for numbers. Color is reserved for the plan itself: materials, the
+ * property line and utility marks. The interface stays monochrome so the
+ * yard is what you look at.
+ */
+
+:root {
+  --paper: #f7f7f5;
+  --surface: #ffffff;
+  --well: #efede8;
+  --ink: #0e0e0e;
+  --ink-2: #3b3b38;
+  --muted: #86867f;
+  --rule: #e4e3de;
+  --rule-strong: #cdccc5;
+  --night: #0e0e0e;
+  --night-ink: #f4f3ef;
+  --signal: #b5461b;
+  --signal-wash: #f8ebe4;
+  --ok: #2c6a4b;
+
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --r: 5px;
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+  --max: 1360px;
+
+  --t-display: clamp(40px, 5.2vw, 72px);
+  --t-title: clamp(28px, 3vw, 40px);
+  --t-head: 22px;
+  --t-body: 15px;
+  --t-small: 13px;
+  --t-label: 11.5px;
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--t-body) / 1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------- type ---------- */
+
+.display {
+  font: 300 var(--t-display) / 1.04 var(--serif);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.title {
+  font: 300 var(--t-title) / 1.1 var(--serif);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.head {
+  font: 500 var(--t-head) / 1.25 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.label {
+  font: 500 var(--t-label) / 1.3 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.small {
+  font-size: var(--t-small);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 58ch;
+}
+
+.warn {
+  color: var(--signal);
+  font-size: var(--t-small);
+}
+
+/* ---------- layout ---------- */
+
+.page {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 12px);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap, 8px);
+}
+
+.spread {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0;
+}
+
+/* ---------- controls ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 14px/1 var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn.solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn.solid:hover {
+  background: var(--ink-2);
+}
+
+.btn.quiet {
+  border-color: var(--rule-strong);
+}
+
+.btn.quiet:hover {
+  border-color: var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn.sm {
+  font-size: 13px;
+  padding: 7px 12px;
+}
+
+.btn.on-night {
+  color: var(--night-ink);
+  border-color: var(--night-ink);
+}
+
+.btn.on-night:hover {
+  background: var(--night-ink);
+  color: var(--night);
+}
+
+.link {
+  font: 500 var(--t-label) / 1.3 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.input,
+.select {
+  font: 400 15px/1.3 var(--sans);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  padding: 9px 11px;
+  width: 100%;
+  min-width: 0;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.input.num {
+  font-family: var(--mono);
+}
+
+.input.big {
+  font: 300 22px/1.2 var(--serif);
+  padding: 14px 16px;
+  border-radius: var(--r);
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.seg button {
+  font: 500 13px/1 var(--sans);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ---------- surfaces ---------- */
+
+.sheet {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+
+.night {
+  background: var(--night);
+  color: var(--night-ink);
+  border-radius: var(--r);
+}
+
+.list > * + * {
+  border-top: 1px solid var(--rule);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 var(--t-label) / 1 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: none;
+}
+
+/* ---------- tables ---------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  font: 500 var(--t-label) / 1.3 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0 12px 10px 0;
+  border-bottom: 1px solid var(--rule-strong);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 11px 12px 11px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.table .r {
+  text-align: right;
+  padding-right: 0;
+}
+
+.scroll-x {
+  overflow-x: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------- print: the proposal prints alone on white ---------- */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print,
+  body > header {
+    display: none !important;
+  }
+}

@@ -1,0 +1,34 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 84px;
+  min-width: 0;
+}
+
+@media (max-width: 1000px) {
+  .stage {
+    position: static;
+  }
+}
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-bottom: 20px;
+}
