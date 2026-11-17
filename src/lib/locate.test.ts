@@ -30,3 +30,15 @@ describe("811", () => {
   });
   void defaultSettings;
 });
+
+describe("likely utilities in Before you dig", () => {
+  it("never counts likely lines as marked, and lists private lines", () => {
+    const job = sampleJob();
+    job.likely = [{ id: "l1", type: "gas", pts: [[0, 0], [20, 0]], label: "Probable gas service", source: "aerial" }];
+    job.privateLines = { sprinklers: "yes", septic: "no" };
+    const list = beforeYouDig(job);
+    expect(list.some((x) => x.startsWith("Likely but not located: gas line"))).toBe(true);
+    expect(list.some((x) => x.includes("sprinkler or drip lines") && !x.includes("septic"))).toBe(true);
+    expect(utilitiesNearArea(job, { ...job.areas[0], pts: [[0, -1], [5, -1], [5, 1], [0, 1]] })).toEqual([]);
+  });
+});

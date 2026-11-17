@@ -2,7 +2,8 @@
 import { AREA_TYPES } from "@/lib/catalog";
 import { centroid } from "@/lib/geometry";
 import { tilesForExtent } from "@/lib/projection";
-import type { Job } from "@/lib/types";
+import { FOV } from "@/lib/camera";
+import type { Camera, Job } from "@/lib/types";
 
 const loadImg = (src: string) =>
   new Promise<HTMLImageElement>((ok, no) => {
@@ -16,7 +17,7 @@ const loadImg = (src: string) =>
  * A top down picture of the plan with a lettered grid, for Claude to match a
  * ground photo against. Tiles come from our own proxy, so the canvas stays clean.
  */
-export async function planImage(job: Job, sampleSvg: string | null): Promise<Blob> {
+export async function planImage(job: Job, sampleSvg: string | null, opts: { camera?: Camera | null } = {}): Promise<Blob> {
   const W = 1500;
   const ext = job.site.extent;
   const H = Math.round((W * ext.h) / ext.w);
@@ -42,6 +43,37 @@ export async function planImage(job: Job, sampleSvg: string | null): Promise<Blo
     g.drawImage(im, 0, 0, W, H);
   }
   g.lineJoin = "round";
+  if (job.lot && job.lot.length > 2) {
+    g.strokeStyle = "#ffb020";
+    g.lineWidth = 3;
+    g.setLineDash([14, 8]);
+    g.beginPath();
+    job.lot.forEach((q, j) => (j ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))));
+    g.closePath();
+    g.stroke();
+    g.setLineDash([]);
+  }
+  const cam = opts.camera;
+  if (cam) {
+    const R = 70 * k;
+    g.fillStyle = "rgba(143,227,255,.28)";
+    g.strokeStyle = "#8fe3ff";
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(X(cam.x), Y(cam.y));
+    g.arc(X(cam.x), Y(cam.y), R, cam.angle - FOV / 2, cam.angle + FOV / 2);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.fillStyle = "#0b6f8f";
+    g.beginPath();
+    g.arc(X(cam.x), Y(cam.y), 10, 0, Math.PI * 2);
+    g.fill();
+    g.font = "bold 20px Arial";
+    g.fillStyle = "#8fe3ff";
+    g.textAlign = "center";
+    g.fillText("PHOTO", X(cam.x), Y(cam.y) + 32);
+  }
   job.areas.forEach((a, i) => {
     g.strokeStyle = AREA_TYPES[a.type].color;
     g.lineWidth = 4;
