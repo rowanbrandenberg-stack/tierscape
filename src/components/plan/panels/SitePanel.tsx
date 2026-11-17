@@ -28,7 +28,7 @@ export function SitePanel() {
         <dd>{job.sample ? "Sample drawing" : site.imagery ? site.imagery.provider : "Not configured. Trace from your own measurements."}</dd>
       </dl>
       <label className="row small" style={{ "--gap": "8px" } as React.CSSProperties}>
-        <input type="checkbox" checked={ed.colorAerial} onChange={(e) => ed.set({ colorAerial: e.target.checked })} />
+        <input type="checkbox" checked={ed.colorAerial} onChange={(e) => { ed.set({ colorAerial: e.target.checked }); try { localStorage.setItem("tierscape.aerialColor", e.target.checked ? "1" : "0"); } catch {} }} />
         Show the aerial in color
       </label>
     </Panel>

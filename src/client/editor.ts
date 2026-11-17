@@ -60,7 +60,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   utilityType: "gas",
   snapDeg: 90,
   view: null,
-  colorAerial: false,
+  colorAerial: true,
   load: (job) => set({ job, past: [], future: [], tool: "select", draft: [], selection: null, placingPlantId: null, view: { ...job.site.extent } }),
   commit: (fn) => {
     const { job, past } = get();

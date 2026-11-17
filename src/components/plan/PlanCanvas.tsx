@@ -40,6 +40,19 @@ export function PlanCanvas() {
     return () => ro.disconnect();
   }, []);
 
+  const setColor = (on: boolean) => {
+    ed.set({ colorAerial: on });
+    try {
+      localStorage.setItem("tierscape.aerialColor", on ? "1" : "0");
+    } catch {}
+  };
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("tierscape.aerialColor");
+      if (v !== null) useEditor.setState({ colorAerial: v === "1" });
+    } catch {}
+  }, []);
+
   /** Plan feet per screen pixel, so strokes, handles and labels keep a steady size at any zoom. */
   const u = view.w / pxWidth;
 
@@ -268,10 +281,10 @@ export function PlanCanvas() {
         onClick={onClick}
         onDoubleClick={() => MULTI.includes(tool) && finishDraft()}
       >
-        <defs dangerouslySetInnerHTML={{ __html: `<filter id="gray"><feColorMatrix type="saturate" values="0"/></filter>${defs}` }} />
+        <defs dangerouslySetInnerHTML={{ __html: `<filter id="gray"><feColorMatrix type="saturate" values="0"/></filter><filter id="muted"><feColorMatrix type="saturate" values=".85"/><feComponentTransfer><feFuncR type="linear" slope=".82"/><feFuncG type="linear" slope=".82"/><feFuncB type="linear" slope=".82"/></feComponentTransfer></filter>${defs}` }} />
 
         {/* base layer: real imagery, the sample drawing, or plain ground */}
-        <g filter={ed.colorAerial ? undefined : "url(#gray)"}>
+        <g filter={ed.colorAerial ? "url(#muted)" : "url(#gray)"}>
           <rect x={ext.x - ext.w} y={ext.y - ext.h} width={ext.w * 3} height={ext.h * 3} fill="#9a9a90" />
           {tiles.map((t) => (
             <image key={`${t.z}/${t.x}/${t.y}`} href={`/api/imagery/${t.z}/${t.x}/${t.y}`} x={t.px} y={t.py} width={t.w + 0.05} height={t.h + 0.05} preserveAspectRatio="none" />
@@ -419,11 +432,14 @@ export function PlanCanvas() {
       </svg>
 
       <div className={s.overlay}>
-        <span className={s.tag}>{job.sample ? "Sample lot" : job.site.imagery ? `${job.site.imagery.provider}` : "No imagery"} · Gray means untouched</span>
+        <span className={s.tag}>{job.sample ? "Sample lot" : job.site.imagery ? `${job.site.imagery.provider}` : "No imagery"}{ed.colorAerial ? "" : " · Gray means untouched"}</span>
         <div className={s.zoom}>
           <button className={s.zbtn} onClick={() => zoomAt(1.4)} aria-label="Zoom in" disabled={view.w <= 12.5}>+</button>
           <button className={s.zbtn} onClick={() => zoomAt(1 / 1.4)} aria-label="Zoom out">−</button>
           <button className={`${s.zbtn} ${s.fit}`} onClick={() => ed.set({ view: { ...ext } })} aria-label="Fit the lot">Fit</button>
+          <button className={`${s.zbtn} ${s.fit}`} onClick={() => setColor(!ed.colorAerial)} aria-pressed={ed.colorAerial} aria-label={ed.colorAerial ? "Show the aerial in gray" : "Show the aerial in color"} title={ed.colorAerial ? "Gray" : "Color"}>
+            {ed.colorAerial ? "Gray" : "Color"}
+          </button>
         </div>
         <ScaleBar u={u} />
       </div>
