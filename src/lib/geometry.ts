@@ -188,3 +188,29 @@ export const circle = (c: Pt, r: number, n = 24): Pt[] =>
   Array.from({ length: n }, (_, i) => [c[0] + r * Math.cos((i * 2 * Math.PI) / n), c[1] + r * Math.sin((i * 2 * Math.PI) / n)] as Pt);
 
 export const round1 = (p: Pt): Pt => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10];
+
+/**
+ * Keep the part of a polygon on one side of the infinite line through a and b,
+ * the side that holds `keep`. Used to split an outdated parcel that still
+ * covers two lots.
+ */
+export function clipHalfPlane(poly: Pt[], a: Pt, b: Pt, keep: Pt): Pt[] {
+  const side = (p: Pt) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+  const s0 = Math.sign(side(keep)) || 1;
+  const inside = (p: Pt) => side(p) * s0 >= 0;
+  const cross = (p: Pt, q: Pt): Pt => {
+    const sp = side(p);
+    const t = sp / (sp - side(q));
+    return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+  };
+  const out: Pt[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i];
+    const q = poly[(i + 1) % poly.length];
+    const ip = inside(p);
+    const iq = inside(q);
+    if (ip) out.push(p);
+    if (ip !== iq) out.push(cross(p, q));
+  }
+  return out;
+}

@@ -19,6 +19,7 @@ const HINTS: Partial<Record<Tool, [string, string, string]>> = {
   utility: ["Click along the marked line.", "Keep clicking along the line.", "Click the last point again or Finish."],
   rect: ["Click one corner.", "Now click the opposite corner.", ""],
   circle: ["Click the center.", "Now click the outer edge.", ""],
+  splitLot: ["Click one end of the line between the two lots.", "Click the other end of that line.", "Click inside the part that is this job."],
   pickLot: ["Click inside the right lot on the aerial.", "Looking up that lot.", ""],
   camera: ["Click where you stood to take the photo.", "Now click the direction the camera faced.", ""],
 };
@@ -35,7 +36,7 @@ export function Toolbar({ onFinish }: { onFinish: () => void }) {
   const hint = ed.placingPlantId
     ? "Click the plan to drop each plant. Circles show the spread it reaches here."
     : HINTS[ed.tool]
-      ? HINTS[ed.tool]![Math.min(2, n >= 3 || (ed.tool === "utility" && n >= 2) ? 2 : n ? 1 : 0)]
+      ? HINTS[ed.tool]![ed.tool === "splitLot" ? Math.min(2, n) : Math.min(2, n >= 3 || (ed.tool === "utility" && n >= 2) ? 2 : n ? 1 : 0)]
       : ed.selection?.kind === "area"
         ? "Drag a corner to reshape, or drag the area to move it."
         : ed.selection?.kind === "plant"

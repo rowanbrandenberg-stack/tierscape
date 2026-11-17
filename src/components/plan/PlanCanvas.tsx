@@ -4,7 +4,7 @@ import { useEditor, type Tool } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { FOV } from "@/lib/camera";
 import { GENERIC_SIZE, UTILITIES } from "@/lib/catalog";
-import { areaSqft, centroid, circle, dist, edgeOn, pointInPolygon, rectangle, round1, snapCorner, snapNext } from "@/lib/geometry";
+import { areaSqft, centroid, circle, clipHalfPlane, dist, edgeOn, pointInPolygon, polygonArea, rectangle, round1, snapCorner, snapNext } from "@/lib/geometry";
 import { addArea, finishDraft, pickLotAt } from "@/client/actions";
 import { serviceFor } from "@/lib/pricing";
 import { tilesForExtent } from "@/lib/projection";
@@ -55,6 +55,29 @@ export function PlanCanvas() {
 
   /** Plan feet per screen pixel, so strokes, handles and labels keep a steady size at any zoom. */
   const u = view.w / pxWidth;
+
+  /*
+   * Zoom 19 covers the whole plan. Once you zoom in past what it can show,
+   * load zoom 20 or 21 for just the visible part, after the view settles.
+   */
+  const [settled, setSettled] = useState<{ x: number; y: number; w: number; h: number; u: number } | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled({ x: view.x, y: view.y, w: view.w, h: view.h, u }), 220);
+    return () => clearTimeout(t);
+  }, [view.x, view.y, view.w, view.h, u]);
+  const detailTiles = useMemo(() => {
+    const origin = job.site.origin;
+    const base = job.site.imagery?.zoom;
+    if (!origin || !base || !settled) return [];
+    // Feet per image pixel at zoom 19 for this latitude.
+    const ftPerPx = (156543.03 * Math.cos((origin.lat * Math.PI) / 180)) / 2 ** base * 3.2808;
+    let z = base;
+    while (z < 21 && settled.u < (ftPerPx / 2 ** (z - base)) / 1.25) z++;
+    if (z === base) return [];
+    const pad = settled.w * 0.15;
+    const list = tilesForExtent(origin, { x: settled.x - pad, y: settled.y - pad, w: settled.w + pad * 2, h: settled.h + pad * 2 }, z);
+    return list.length <= 80 ? list : [];
+  }, [job.site.origin, job.site.imagery?.zoom, settled]);
 
   const toPlan = useCallback((e: { clientX: number; clientY: number }): Pt => {
     const svg = svgRef.current!;
@@ -166,6 +189,12 @@ export function PlanCanvas() {
       ed.commit((j) => void j.plants.find((p) => p.id === placingPlantId)?.spots.push(round1(q)));
       return;
     }
+    if (tool === "splitLot") {
+      if (draft.length < 2) return ed.set({ draft: [...draft, round1(draft.length ? snapNext(draft, q, ed.snapDeg) : q)] });
+      const kept = job.lot ? clipHalfPlane(job.lot, draft[0], draft[1], q).map(round1) : null;
+      if (kept && kept.length >= 3 && polygonArea(kept) > 50) ed.commit((j) => void (j.lot = kept));
+      return ed.set({ tool: "select", draft: [] });
+    }
     if (tool === "pickLot") {
       if (!draft.length) void pickLotAt(q);
       return;
@@ -266,6 +295,7 @@ export function PlanCanvas() {
   );
 
   const tiles = job.site.origin && job.site.imagery ? tilesForExtent(job.site.origin, { x: ext.x - ext.w * 0.25, y: ext.y - ext.w * 0.25, w: ext.w * 1.5, h: ext.h + ext.w * 0.5 }, job.site.imagery.zoom) : [];
+  const detail = detailTiles;
   const photo = job.photos.find((p) => p.id === job.activePhotoId);
   const preview = hover && draft.length && tool !== "select" ? (MULTI.includes(tool) ? snapNext(draft, hover, ed.snapDeg) : hover) : null;
 
@@ -292,6 +322,10 @@ export function PlanCanvas() {
           <rect x={ext.x - ext.w} y={ext.y - ext.h} width={ext.w * 3} height={ext.h * 3} fill="#9a9a90" />
           {tiles.map((t) => (
             <image key={`${t.z}/${t.x}/${t.y}`} href={`/api/imagery/${t.z}/${t.x}/${t.y}`} x={t.px} y={t.py} width={t.w + 0.05} height={t.h + 0.05} preserveAspectRatio="none" />
+          ))}
+          {/* sharper tiles over the base when zoomed in; any that do not exist simply leave the base showing */}
+          {detail.map((t) => (
+            <image key={`${t.z}/${t.x}/${t.y}`} href={`/api/imagery/${t.z}/${t.x}/${t.y}`} x={t.px} y={t.py} width={t.w + 0.02} height={t.h + 0.02} preserveAspectRatio="none" className={s.detail} onLoad={(e) => e.currentTarget.classList.add(s.loaded)} />
           ))}
           {job.sample && <SampleLot />}
         </g>
@@ -381,6 +415,22 @@ export function PlanCanvas() {
             </g>
           );
         })}
+
+        {/* split line preview, drawn right across the plan */}
+        {tool === "splitLot" && draft.length > 0 && (() => {
+          const a = draft[0];
+          const b = draft[1] ?? (hover ? snapNext(draft, hover, ed.snapDeg) : null);
+          if (!b || dist(a, b) < 0.5) return <circle cx={a[0]} cy={a[1]} r={4 * u} fill="#ffb020" pointerEvents="none" />;
+          const L = (ext.w + ext.h) * 3;
+          const d: Pt = [(b[0] - a[0]) / dist(a, b), (b[1] - a[1]) / dist(a, b)];
+          return (
+            <g pointerEvents="none">
+              <line x1={a[0] - d[0] * L} y1={a[1] - d[1] * L} x2={a[0] + d[0] * L} y2={a[1] + d[1] * L} stroke="#ffb020" strokeWidth={2 * u} strokeDasharray={`${8 * u} ${5 * u}`} />
+              <circle cx={a[0]} cy={a[1]} r={4 * u} fill="#ffb020" />
+              <circle cx={b[0]} cy={b[1]} r={4 * u} fill="#ffb020" />
+            </g>
+          );
+        })()}
 
         {/* where the active photo was taken */}
         {photo?.camera && tool !== "camera" && (() => {

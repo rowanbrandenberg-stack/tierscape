@@ -62,7 +62,7 @@ export function TiersView({ onNext }: { onNext: () => void }) {
           {canRender
             ? "These are sketches. Generate a render to see the homeowner's own photo finished."
             : photo?.dataUrl
-              ? "These are sketches. Photo renders need an image model configured on the server."
+              ? "These are sketches. Photo renders are not available on your plan yet."
               : "These are sketches. Add a site photo on the Plan tab to render the real yard."}
         </p>
       )}

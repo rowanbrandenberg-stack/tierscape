@@ -135,3 +135,49 @@
 .del:hover {
   color: var(--signal);
 }
+
+.example {
+  margin: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--paper);
+  overflow: hidden;
+  align-self: start;
+}
+
+.exampleMap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 160 / 105;
+}
+
+.exampleBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.exampleBody :global(.link) {
+  align-self: flex-start;
+}
+
+.exampleTiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 10px 0;
+}
+
+.exampleTiers > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.exampleTiers strong {
+  font-size: 1.15rem;
+}

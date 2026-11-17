@@ -1,7 +1,21 @@
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+  padding: clamp(56px, 10vw, 128px) 0 clamp(48px, 7vw, 88px);
+}
+
+@media (min-width: 1040px) {
+  .top {
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  }
+}
+
 .hero {
   display: flex;
   flex-direction: column;
   gap: 22px;
-  padding: clamp(56px, 10vw, 128px) 0 clamp(48px, 7vw, 88px);
   max-width: 920px;
+  min-width: 0;
 }

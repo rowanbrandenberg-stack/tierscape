@@ -19,7 +19,12 @@ export interface MaterialLine {
   bulk?: boolean;
   /** The paver line, which takes layout, size and color from the area. */
   paver?: boolean;
+  /** Generic plants sized to the bed. Replaced by the plants placed on the plan. */
+  plantFill?: boolean;
 }
+
+/** Older saved price books have no plantFill flag, so recognise plant lines by name too. */
+export const isPlantFill = (it: MaterialLine) => it.plantFill ?? (it.unit === "each" && /\b(shrubs?|perennials?|groundcovers?|grasses|plants?)\b/i.test(it.name));
 
 export interface Service {
   id: string;
@@ -107,7 +112,7 @@ export const DEFAULT_SERVICES: Service[] = [
     id: "bed-mulch", areaType: "bed", title: "Mulched bed with starter shrubs", fill: "mulch", laborPerSqft: 0.04, installedPrice: 0,
     items: [
       { name: "Shredded bark mulch, 3 in deep", unit: "cu yd", per: "sqft", qty: 0.00926, cost: 42, bulk: true },
-      { name: "Native shrubs, 1 gal", unit: "each", per: "sqft", qty: 1 / 25, cost: 14 },
+      { name: "Native shrubs, 1 gal", unit: "each", per: "sqft", qty: 1 / 25, cost: 14, plantFill: true },
       { name: "Weed barrier fabric", unit: "sq ft", per: "sqft", qty: 1, cost: 0.18, bulk: true },
     ],
     steps: ["Clear weeds and define the bed edge", "Lay weed barrier", "Plant shrubs and water in", "Spread mulch"],
@@ -115,8 +120,8 @@ export const DEFAULT_SERVICES: Service[] = [
   {
     id: "bed-native-drip", areaType: "bed", title: "Native shrub and perennial bed with drip irrigation", fill: "mulch", laborPerSqft: 0.07, installedPrice: 0,
     items: [
-      { name: "Native shrubs, 5 gal", unit: "each", per: "sqft", qty: 1 / 20, cost: 38 },
-      { name: "Perennials, 1 gal", unit: "each", per: "sqft", qty: 1 / 12, cost: 12 },
+      { name: "Native shrubs, 5 gal", unit: "each", per: "sqft", qty: 1 / 20, cost: 38, plantFill: true },
+      { name: "Perennials, 1 gal", unit: "each", per: "sqft", qty: 1 / 12, cost: 12, plantFill: true },
       { name: "Shredded bark mulch, 3 in deep", unit: "cu yd", per: "sqft", qty: 0.00926, cost: 42, bulk: true },
       { name: "Drip line", unit: "lin ft", per: "sqft", qty: 0.3, cost: 0.55, bulk: true },
       { name: "Steel edging", unit: "lin ft", per: "lf", qty: 1, cost: 4.5 },
@@ -126,8 +131,8 @@ export const DEFAULT_SERVICES: Service[] = [
   {
     id: "bed-layered", areaType: "bed", title: "Layered planting with boulders, cinder mulch and lighting", fill: "cinder", laborPerSqft: 0.11, installedPrice: 0,
     items: [
-      { name: "Native shrubs, 5 gal", unit: "each", per: "sqft", qty: 1 / 15, cost: 38 },
-      { name: "Perennials, 1 gal", unit: "each", per: "sqft", qty: 1 / 8, cost: 12 },
+      { name: "Native shrubs, 5 gal", unit: "each", per: "sqft", qty: 1 / 15, cost: 38, plantFill: true },
+      { name: "Perennials, 1 gal", unit: "each", per: "sqft", qty: 1 / 8, cost: 12, plantFill: true },
       { name: "Accent boulder", unit: "each", per: "sqft", qty: 1 / 60, cost: 140 },
       { name: "Red cinder mulch, 3 in deep", unit: "cu yd", per: "sqft", qty: 0.00926, cost: 58, bulk: true },
       { name: "Drip line", unit: "lin ft", per: "sqft", qty: 0.3, cost: 0.55, bulk: true },

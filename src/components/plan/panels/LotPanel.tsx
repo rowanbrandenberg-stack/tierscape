@@ -28,9 +28,12 @@ export function LotPanel() {
           )}
           <p className="small muted">
             {parcel?.address ? `County record: ${parcel.address}${parcel.apn ? `, APN ${parcel.apn}` : ""}. ` : ""}
-            {parcel ? `From ${parcel.source}. ` : "Drawn by hand. "}Parcel maps are approximate; confirm the pins before building on the line.
+            {parcel ? `From ${parcel.source}. ` : "Drawn by hand. "}County maps can lag a recent split or merge. If this line takes in a neighbor, use Split lot. Confirm the pins before building on the line.
           </p>
           <div className="row">
+            <button className="link" onClick={() => ed.set({ tool: ed.tool === "splitLot" ? "select" : "splitLot", draft: [], selection: null, placingPlantId: null, lotNotice: null })}>
+              {ed.tool === "splitLot" ? "Cancel split" : "Split lot"}
+            </button>
             {job.site.origin && (
               <button className="link" onClick={() => ed.set({ tool: ed.tool === "pickLot" ? "select" : "pickLot", draft: [], selection: null, placingPlantId: null, lotNotice: null })}>
                 {ed.tool === "pickLot" ? "Cancel" : "Wrong lot? Pick it on the map"}

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useSettings } from "@/client/settingsStore";
 import { AREA_TYPES, PLANT_KINDS } from "@/lib/catalog";
-import { unitPrice } from "@/lib/pricing";
+import { marginFromMarkup, markupFromMargin, money, unitPrice } from "@/lib/pricing";
 import type { Pricing } from "@/lib/settings";
 import { TIERS, type AreaType, type PlantKind } from "@/lib/types";
 import s from "./settings.module.css";
@@ -30,8 +30,16 @@ export function PriceBook() {
       </div>
       <div className={s.content}>
         <div className={s.grid4}>
-          <div className="field"><label className="label">Labor rate, $ per hour</label><NumberInput label="Labor rate" value={pricing.laborRate} onChange={(n) => set((p) => void (p.laborRate = n))} /></div>
-          <div className="field"><label className="label">Markup, %</label><NumberInput label="Markup" value={pricing.markupPct} onChange={(n) => set((p) => void (p.markupPct = n))} /></div>
+          <div className="field">
+            <label className="label">Crew cost, $ per person hour</label>
+            <NumberInput label="Crew cost per person hour" value={pricing.laborRate} onChange={(n) => set((p) => void (p.laborRate = n))} />
+            <span className="small muted">What one worker costs you, with taxes and insurance. Sells at {money(pricing.laborRate * (1 + pricing.markupPct / 100))}/hr.</span>
+          </div>
+          <div className="field">
+            <label className="label">Target margin, %</label>
+            <NumberInput label="Target margin" value={Math.round(marginFromMarkup(pricing.markupPct) * 10) / 10} onChange={(n) => set((p) => void (p.markupPct = markupFromMargin(n)))} />
+            <span className="small muted">Profit as a share of the price. That is a {Math.round(pricing.markupPct * 10) / 10}% markup on cost.</span>
+          </div>
           <div className="field"><label className="label">Waste allowance, %</label><NumberInput label="Waste allowance" value={pricing.wastePct} onChange={(n) => set((p) => void (p.wastePct = n))} /></div>
           <div className="field"><label className="label">Crew size</label><NumberInput label="Crew size" step="1" value={pricing.crewSize} onChange={(n) => set((p) => void (p.crewSize = Math.max(1, Math.round(n))))} /></div>
         </div>
@@ -64,7 +72,7 @@ export function PriceBook() {
             <h3 className="label">Price book</h3>
             <input className="input" style={{ maxWidth: 260 }} placeholder="Search services" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search services" />
           </div>
-          <p className="small muted">Prices are per square foot, installed. Leave yours blank and it is built from your costs, labor rate and markup.</p>
+          <p className="small muted">Prices are per square foot, installed. Leave yours blank and it is built from your materials, crew cost and target margin.</p>
           <div className={s.book}>
             {pricing.services.filter((x) => match(`${x.title} ${AREA_TYPES[x.areaType].label}`)).map((svc, si) => {
               const idx = pricing.services.indexOf(svc);

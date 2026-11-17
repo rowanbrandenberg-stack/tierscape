@@ -8,9 +8,17 @@ import { findLikelyUtilities, traceMarksFromPhoto } from "@/client/utilities";
 import { PRIVATE_LINES, UTILITIES } from "@/lib/catalog";
 import { perimeter } from "@/lib/geometry";
 import { buildLocateRequest, rulesFor, ticketDates } from "@/lib/locate";
-import type { PrivateLineAnswer, UtilityType } from "@/lib/types";
+import type { LocateStatus, PrivateLineAnswer, UtilityType } from "@/lib/types";
 import { Panel } from "../../ui/Panel";
 import s from "./panels.module.css";
+
+const STATUS: Record<LocateStatus, { text: string; bg: string; fg: string }> = {
+  not_requested: { text: "Not requested", bg: "transparent", fg: "var(--ink)" },
+  prepared: { text: "Prepared, not submitted", bg: "#fff4d6", fg: "#7a5200" },
+  submitted: { text: "Submitted", bg: "#e4f1ff", fg: "#0b4f8a" },
+  clear: { text: "Clear to dig", bg: "#e3f4e6", fg: "#1d6b33" },
+  expired: { text: "Expired, request again", bg: "#fde7e7", fg: "#9a1c1c" },
+};
 
 const fmt = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
@@ -44,7 +52,7 @@ export function LocatePanel() {
     setFindMsg(
       (r.found ? `Found ${r.found} likely ${r.found === 1 ? "utility" : "utilities"}.` : "Nothing obvious turned up. That does not mean the yard is clear.") +
         (r.errors.length ? ` ${r.errors.join(" ")}` : "") +
-        (!claudeOk ? " Connect Claude in Settings to also read clues off the aerial." : ""),
+        (!claudeOk ? " Reading clues off the aerial needs AI assist." : ""),
     );
   }
 
@@ -164,7 +172,7 @@ export function LocatePanel() {
       )}
       <p className="small muted">Each mark shows a 2 ft hand dig band on both sides. Areas and plants inside it get flagged.</p>
       <div className="row">
-        <button className="btn sm quiet" onClick={trace} disabled={tracing || !photo?.dataUrl || !claudeOk} title={!claudeOk ? "Connect Claude in Settings" : !photo ? "Add a site photo of the paint first" : undefined}>
+        <button className="btn sm quiet" onClick={trace} disabled={tracing || !photo?.dataUrl || !claudeOk} title={!claudeOk ? "Needs AI assist" : !photo ? "Add a site photo of the paint first" : undefined}>
           {tracing ? "Tracing" : "Trace paint from a photo"}
         </button>
         <span className="small muted">{!photo ? "Add a photo of the paint and flags under Site photos." : photo.camera ? `Uses ${photo.name}.` : `Uses ${photo.name}. Place it on the plan first for a better trace.`}</span>
@@ -172,6 +180,13 @@ export function LocatePanel() {
       {traceMsg && <p className="small muted" role="status">{traceMsg}</p>}
 
       <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
+        <div className={s.line}>
+          <span className="label">811 request</span>
+          <span className={s.grow} />
+          <span className="small" role="status" style={{ padding: "2px 10px", borderRadius: 999, border: "1px solid var(--rule-strong)", background: STATUS[job.locate.status].bg, color: STATUS[job.locate.status].fg }}>
+            {STATUS[job.locate.status].text}{job.locate.number && job.locate.status !== "prepared" ? ` · ${job.locate.number}` : ""}
+          </span>
+        </div>
         <div className={s.grid2}>
           <div className="field">
             <label className="label" htmlFor="loc-start">Planned dig date</label>
@@ -184,8 +199,8 @@ export function LocatePanel() {
         {error && <p className="warn" role="alert">{error}</p>}
         {prepared && (
           <div className={s.callout}>
-            <strong>Ready for {prepared.center}.</strong>
-            <span>Direct submission is not connected yet, so Tierscape has everything filled in for you:</span>
+            <strong>Prepared, not submitted.</strong>
+            <span>Tierscape filled everything in, but nothing has gone to {prepared.center} yet. Submit it there, then enter the ticket number below:</span>
             <ol>{prepared.checklist.map((c) => <li key={c}>{c}</li>)}</ol>
             <div className="row">
               <a className="btn sm" href={prepared.file} download={`dig-area-${job.id}.geojson`}>Download dig area</a>

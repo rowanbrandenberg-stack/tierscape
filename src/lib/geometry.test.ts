@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { polygonArea, perimeter, pointInPolygon, snapNext, snapCorner, pointByAngle, polylineNearPolygon, rectangle } from "./geometry";
+import { polygonArea, perimeter, pointInPolygon, snapNext, snapCorner, pointByAngle, polylineNearPolygon, rectangle, clipHalfPlane } from "./geometry";
 import type { Pt } from "./types";
 
 const sq: Pt[] = rectangle([0, 0], [10, 20]);
@@ -40,5 +40,16 @@ describe("geometry", () => {
   it("finds a line near a polygon", () => {
     expect(polylineNearPolygon([[-5, 21.5], [15, 21.5]], sq, 2)).toBe(true);
     expect(polylineNearPolygon([[-5, 23], [15, 23]], sq, 2)).toBe(false);
+  });
+});
+
+describe("clipHalfPlane", () => {
+  it("keeps the half of a merged lot that holds the clicked point", () => {
+    const merged: [number, number][] = [[0, 0], [100, 0], [100, 50], [0, 50]];
+    const left = clipHalfPlane(merged, [50, -10], [50, 60], [20, 25]);
+    expect(polygonArea(left)).toBeCloseTo(2500, 5);
+    expect(left.every((p) => p[0] <= 50 + 1e-9)).toBe(true);
+    const right = clipHalfPlane(merged, [50, -10], [50, 60], [80, 25]);
+    expect(right.every((p) => p[0] >= 50 - 1e-9)).toBe(true);
   });
 });

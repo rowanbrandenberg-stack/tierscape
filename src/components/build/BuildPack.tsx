@@ -37,10 +37,10 @@ export function BuildPack() {
         <p className="small muted">Quantities include your waste allowance and extra for paver cuts.</p>
         <div className="scroll-x">
           <table className="table">
-            <thead><tr><th>Material</th><th className="r">Qty</th><th>Unit</th><th className="r">Your cost</th></tr></thead>
+            <thead><tr><th>Material</th><th className="r">Qty</th><th style={{ paddingLeft: 8 }}>Unit</th><th className="r">Your cost</th></tr></thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.name}><td>{r.name}</td><td className="r num">{+r.qty.toFixed(1)}</td><td>{r.unit}</td><td className="r num">{money(r.cost)}</td></tr>
+                <tr key={r.name}><td>{r.name}</td><td className="r num">{+r.qty.toFixed(1)}</td><td style={{ paddingLeft: 8 }}>{r.unit}</td><td className="r num">{money(r.cost)}</td></tr>
               ))}
               <tr><td><strong>Materials total</strong></td><td /><td /><td className="r num"><strong>{money(q.materials)}</strong></td></tr>
             </tbody>
@@ -52,12 +52,12 @@ export function BuildPack() {
         <section className="stack">
           <h3 className="label">Labor and margin</h3>
           <dl className={s.figures}>
-            <dt>Crew hours</dt><dd className="num">{Math.round(q.hours)} hr</dd>
-            <dt>Days with a {pricing.crewSize} person crew</dt><dd className="num">{q.days}</dd>
-            <dt>Labor cost</dt><dd className="num">{money(q.labor)}</dd>
+            <dt>Person hours</dt><dd className="num">{Math.round(q.hours)} hr</dd>
+            <dt>On site with a {pricing.crewSize} person crew</dt><dd className="num">{q.days} {q.days === 1 ? "day" : "days"}</dd>
+            <dt>Crew cost at {money(pricing.laborRate)}/person hr</dt><dd className="num">{money(q.labor)}</dd>
             <dt>Materials cost</dt><dd className="num">{money(q.materials)}</dd>
             <dt className={s.strong}>Price to homeowner</dt><dd className={`num ${s.strong}`}>{money(q.price)}</dd>
-            <dt>Gross profit</dt><dd className="num">{money(q.price - q.materials - q.labor)}</dd>
+            <dt>Gross profit</dt><dd className="num">{money(q.price - q.materials - q.labor)}{q.price > 0 && <span className="small muted"> · {Math.round(((q.price - q.materials - q.labor) / q.price) * 100)}% margin</span>}</dd>
           </dl>
         </section>
         <section className={`stack ${s.dig}`}>

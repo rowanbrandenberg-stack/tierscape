@@ -77,7 +77,13 @@ export function beforeYouDig(job: Job): string[] {
       ? `Request a locate through ${rules.center} at least ${rules.noticeWorkingDays} full working days before digging.`
       : "Call 811 for a utility locate before digging. Notice periods vary by state.",
   );
-  out.push(job.locate.number ? `811 ticket ${job.locate.number}${job.locate.requestedOn ? `, requested ${job.locate.requestedOn}` : ""}.` : "811 ticket not requested yet.");
+  out.push(
+    job.locate.number
+      ? `811 ticket ${job.locate.number}${job.locate.requestedOn ? `, requested ${job.locate.requestedOn}` : ""}.`
+      : job.locate.status === "prepared"
+        ? "811 request prepared in Tierscape but not submitted. Nothing is marked until it is."
+        : "811 ticket not requested yet.",
+  );
   out.push("Do not dig until every utility on the ticket has responded.");
   out.push(`Use hand tools only within ${rules ? rules.handDigFt * 12 : 24} in of any marked line.`);
   for (const a of job.areas) {
