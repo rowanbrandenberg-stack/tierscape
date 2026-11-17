@@ -23,6 +23,14 @@ const post = (body: unknown): RequestInit => ({ method: "POST", headers: { "cont
 
 export const api = {
   features: () => call<Features>("/api/config"),
+  suggestAddress: (q: string, near: { lat: number; lon: number } | null, signal?: AbortSignal) => {
+    const p = new URLSearchParams({ q });
+    if (near) {
+      p.set("lat", String(near.lat));
+      p.set("lon", String(near.lon));
+    }
+    return call<{ suggestions: string[] }>(`/api/address/suggest?${p}`, { signal });
+  },
   site: (address: string) => call<{ site: Site; notes: { parcel: string | null; imagery: string | null } }>("/api/site", post({ address })),
   parcelAt: (p: { lat: number; lon: number }) =>
     call<{ parcel: { apn: string | null; address: string | null; ring: { lat: number; lon: number }[]; source: string } }>("/api/parcels/at", post(p)),

@@ -21,6 +21,7 @@ Node 20 or newer.
 
 | Feature | Source | Key |
 | --- | --- | --- |
+| Address suggestions while typing | Esri World Geocoding | none in development, `ARCGIS_API_KEY` in production |
 | Address lookup and county | US Census geocoder | none, free |
 | Property line in Arizona | AZGeo statewide parcels (State of Arizona) | none, free |
 | Aerial imagery | Esri World Imagery | none in development, `ARCGIS_API_KEY` in production |

@@ -16,6 +16,39 @@
   flex: none;
 }
 
+.combo {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+.suggestion {
+  padding: 10px 12px;
+  border-radius: calc(var(--r) - 2px);
+  font: 400 15px/1.3 var(--sans);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.suggestionActive {
+  background: var(--rule);
+}
+
 @media (max-width: 640px) {
   .inputRow {
     flex-direction: column;
