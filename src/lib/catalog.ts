@@ -1,4 +1,4 @@
-import type { AreaType, BorderKey, PaverColor, PaverLayout, PaverSize, PlantKind, TierKey, UtilityType } from "./types";
+import type { AreaType, BorderKey, PaverColor, PaverLayout, PaverSize, PlantKind, PrivateLineKey, TierKey, UtilityType } from "./types";
 
 /**
  * Default price book. Every number here is a starting point a landscaper
@@ -206,6 +206,17 @@ export const DEFAULT_PLANT_SIZES: Record<PlantKind, Record<TierKey, PlantSizeRow
 export const GENERIC_SIZE: Record<PlantKind, [number, number]> = { tree: [15, 10], shrub: [4, 4], perennial: [1.5, 1.5] };
 
 /* ---------- utilities, APWA uniform color code ---------- */
+
+export const PRIVATE_LINES: { key: PrivateLineKey; name: string; type: UtilityType }[] = [
+  { key: "sprinklers", name: "Sprinkler or drip lines", type: "irr" },
+  { key: "lighting", name: "Landscape or path lighting", type: "elec" },
+  { key: "outbuilding", name: "Power or water to a shed, garage or gate", type: "elec" },
+  { key: "propane", name: "Propane tank line", type: "gas" },
+  { key: "gas_grill", name: "Gas line to a grill, fire pit or heater", type: "gas" },
+  { key: "septic", name: "Septic tank or leach field", type: "sewer" },
+  { key: "well", name: "Private well line", type: "water" },
+  { key: "pet_fence", name: "Invisible pet fence wire", type: "comm" },
+];
 
 export const UTILITIES: Record<UtilityType, { name: string; short: string; color: string }> = {
   gas: { name: "Gas line", short: "GAS", color: "#f2c500" },

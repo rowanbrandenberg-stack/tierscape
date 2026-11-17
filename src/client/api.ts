@@ -1,5 +1,5 @@
 "use client";
-import type { Site } from "@/lib/types";
+import type { Site, UtilityType } from "@/lib/types";
 import type { LocateRequest } from "@/lib/locate";
 
 export type Feature = { ok: boolean; why?: string };
@@ -26,6 +26,19 @@ export const api = {
   site: (address: string) => call<{ site: Site; notes: { parcel: string | null; imagery: string | null } }>("/api/site", post({ address })),
   parcelAt: (p: { lat: number; lon: number }) =>
     call<{ parcel: { apn: string | null; address: string | null; ring: { lat: number; lon: number }[]; source: string } }>("/api/parcels/at", post(p)),
+  publicUtilities: (p: { lat: number; lon: number; radiusM?: number }) =>
+    call<{ features: { type: UtilityType; label: string; pts: { lat: number; lon: number }[]; overhead: boolean }[]; credit: string }>("/api/utilities/public", post(p)),
+  detectUtilities: (plan: Blob) => {
+    const fd = new FormData();
+    fd.set("plan", new File([plan], "plan.png", { type: "image/png" }));
+    return call<{ clues: { type: UtilityType; xPct: number; yPct: number; label: string }[]; routes: { type: UtilityType; pts: [number, number][]; label: string }[] }>("/api/utilities/detect", { method: "POST", body: fd });
+  },
+  traceMarks: (plan: Blob, photo: Blob) => {
+    const fd = new FormData();
+    fd.set("plan", new File([plan], "plan.png", { type: "image/png" }));
+    fd.set("photo", new File([photo], "photo", { type: photo.type || "image/jpeg" }));
+    return call<{ marks: { type: UtilityType; pts: [number, number][]; confidence: string }[]; note: string }>("/api/utilities/trace", { method: "POST", body: fd });
+  },
   estimate: (location: string, plants: { name: string; kind: string }[]) =>
     call<{ estimates: { name: string; height_ft: number; spread_ft: number; note: string }[] }>("/api/plants/estimate", post({ location, plants })),
   locatePhoto: (plan: Blob, photo: Blob) => {

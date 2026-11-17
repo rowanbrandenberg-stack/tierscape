@@ -111,3 +111,28 @@
   text-align: center;
   margin-top: 4px;
 }
+
+/* Likely utilities pulse gently so they read as "go get this located". */
+.pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: likelyPulse 1.8s ease-out infinite;
+}
+
+.pulseLine {
+  animation: likelyFade 1.8s ease-in-out infinite;
+}
+
+@keyframes likelyPulse {
+  0% { transform: scale(0.6); opacity: 0.95; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes likelyFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .pulseLine { animation: none; }
+}

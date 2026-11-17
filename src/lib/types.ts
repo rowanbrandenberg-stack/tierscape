@@ -59,7 +59,27 @@ export interface UtilityLine {
   id: string;
   type: UtilityType;
   pts: Pt[];
+  /** Where the mark came from. Missing = drawn by hand from the paint. */
+  source?: "hand" | "photo";
 }
+
+/**
+ * Something that suggests a utility is there, before anyone has located it.
+ * Never counts as marked: it only exists to push the 811 request.
+ */
+export interface LikelyUtility {
+  id: string;
+  type: UtilityType;
+  /** One point for a clue (a meter, a pole), two or more for a probable route. */
+  pts: Pt[];
+  label: string;
+  source: "public" | "aerial";
+  /** Overhead lines are a hazard for equipment, not for digging. */
+  overhead?: boolean;
+}
+
+export type PrivateLineKey = "sprinklers" | "lighting" | "outbuilding" | "propane" | "septic" | "well" | "gas_grill" | "pet_fence";
+export type PrivateLineAnswer = "yes" | "no" | "unsure";
 
 export interface Camera {
   x: number;
@@ -128,6 +148,10 @@ export interface Job {
   areas: Area[];
   plants: Plant[];
   utilities: UtilityLine[];
+  /** Likely utilities found from public maps and the aerial. Older jobs may not have it. */
+  likely?: LikelyUtility[];
+  /** Answers to the private lines checklist, which 811 does not mark. */
+  privateLines?: Partial<Record<PrivateLineKey, PrivateLineAnswer>>;
   photos: SitePhoto[];
   activePhotoId: string | null;
   locate: LocateTicket;

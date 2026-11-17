@@ -1,4 +1,4 @@
-import { AREA_TYPES, GENERIC_SIZE, UTILITIES } from "./catalog";
+import { AREA_TYPES, GENERIC_SIZE, PRIVATE_LINES, UTILITIES } from "./catalog";
 import { areaSqft, polylineDistance, polylineNearPolygon, pointInPolygon, polygonDistance } from "./geometry";
 import { toGeo } from "./projection";
 import type { Area, Job, Plant, Pt, UtilityType } from "./types";
@@ -90,6 +90,14 @@ export function beforeYouDig(job: Job): string[] {
       const near = utilitiesNearPlant(job, p, s);
       if (near.length) out.push(`${p.name || "A plant"} sits near the ${near.map((t) => UTILITIES[t].name.toLowerCase()).join(" and ")}. Move it or hand dig the hole.`);
     }
+  const likely = (job.likely ?? []).filter((l) => !l.overhead);
+  if (likely.length) {
+    const types = [...new Set(likely.map((l) => UTILITIES[l.type].name.toLowerCase()))];
+    out.push(`Likely but not located: ${types.join(", ")}. Treat these as live until 811 marks them or the ticket comes back clear.`);
+  }
+  if ((job.likely ?? []).some((l) => l.overhead)) out.push("Overhead power lines near the work. Keep equipment and long tools at least 10 ft away.");
+  const priv = PRIVATE_LINES.filter((p) => job.privateLines?.[p.key] === "yes" || job.privateLines?.[p.key] === "unsure");
+  if (priv.length) out.push(`811 will not mark private lines. Locate these before digging: ${priv.map((p) => p.name.toLowerCase()).join(", ")}.`);
   if (job.lot) out.push("Stay inside the property line. Confirm the corners before work that runs along it.");
   return out;
 }

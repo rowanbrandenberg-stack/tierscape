@@ -357,6 +357,31 @@ export function PlanCanvas() {
           );
         })}
 
+        {/* likely utilities: guesses that push the 811 request, never marks */}
+        {(job.likely ?? []).map((l) => {
+          const U = UTILITIES[l.type];
+          const tag = `LIKELY ${U.short} · NOT LOCATED`;
+          if (l.pts.length === 1) {
+            const [x, y] = l.pts[0];
+            return (
+              <g key={l.id} pointerEvents="none">
+                <circle cx={x} cy={y} r={9 * u} fill="none" stroke={U.color} strokeWidth={2 * u} className={s.pulse} />
+                <circle cx={x} cy={y} r={4.5 * u} fill={U.color} fillOpacity={0.85} stroke="#000" strokeOpacity={0.5} strokeWidth={1 * u} />
+                {label(x, y - 13 * u, tag, U.color, 9)}
+              </g>
+            );
+          }
+          const m = Math.floor((l.pts.length - 1) / 2);
+          const mid: Pt = [(l.pts[m][0] + l.pts[m + 1][0]) / 2, (l.pts[m][1] + l.pts[m + 1][1]) / 2];
+          return (
+            <g key={l.id} pointerEvents="none">
+              <polyline points={l.pts.join(" ")} fill="none" stroke="#000" strokeOpacity={0.35} strokeWidth={4 * u} strokeLinecap="round" />
+              <polyline points={l.pts.join(" ")} fill="none" stroke={U.color} strokeWidth={2 * u} strokeDasharray={`${2 * u} ${5 * u}`} strokeLinecap="round" className={s.pulseLine} />
+              {label(mid[0], mid[1] - 7 * u, l.overhead ? `OVERHEAD ${U.short}` : tag, U.color, 9)}
+            </g>
+          );
+        })}
+
         {/* where the active photo was taken */}
         {photo?.camera && tool !== "camera" && (() => {
           const c = photo.camera;

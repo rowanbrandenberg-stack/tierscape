@@ -3,10 +3,12 @@ import { useState } from "react";
 import { api, ApiError } from "@/client/api";
 import { useEditor } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
-import { UTILITIES } from "@/lib/catalog";
+import { useFeatures } from "@/client/useFeatures";
+import { findLikelyUtilities, traceMarksFromPhoto } from "@/client/utilities";
+import { PRIVATE_LINES, UTILITIES } from "@/lib/catalog";
 import { perimeter } from "@/lib/geometry";
 import { buildLocateRequest, rulesFor, ticketDates } from "@/lib/locate";
-import type { UtilityType } from "@/lib/types";
+import type { PrivateLineAnswer, UtilityType } from "@/lib/types";
 import { Panel } from "../../ui/Panel";
 import s from "./panels.module.css";
 
@@ -25,6 +27,44 @@ export function LocatePanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [start, setStart] = useState("");
+  const features = useFeatures();
+  const [finding, setFinding] = useState(false);
+  const [findMsg, setFindMsg] = useState<string | null>(null);
+  const [tracing, setTracing] = useState(false);
+  const [traceMsg, setTraceMsg] = useState<string | null>(null);
+  const likely = job.likely ?? [];
+  const photo = job.photos.find((p) => p.id === job.activePhotoId) ?? null;
+  const claudeOk = !!features?.claude.ok;
+
+  async function find() {
+    setFinding(true);
+    setFindMsg(null);
+    const r = await findLikelyUtilities({ aerial: claudeOk });
+    setFinding(false);
+    setFindMsg(
+      (r.found ? `Found ${r.found} likely ${r.found === 1 ? "utility" : "utilities"}.` : "Nothing obvious turned up. That does not mean the yard is clear.") +
+        (r.errors.length ? ` ${r.errors.join(" ")}` : "") +
+        (!claudeOk ? " Connect Claude in Settings to also read clues off the aerial." : ""),
+    );
+  }
+
+  async function trace() {
+    if (!photo?.dataUrl) return;
+    setTracing(true);
+    setTraceMsg(null);
+    try {
+      const blob = await (await fetch(photo.dataUrl)).blob();
+      const r = await traceMarksFromPhoto(blob, photo.camera);
+      setTraceMsg(r.added ? `Traced ${r.added} marked ${r.added === 1 ? "line" : "lines"}. Check them against the paint and drag points to fix. ${r.note}` : r.note || "No locator marks found in this photo.");
+    } catch (e) {
+      setTraceMsg(e instanceof ApiError ? e.message : "Could not trace this photo.");
+    } finally {
+      setTracing(false);
+    }
+  }
+
+  const setPrivate = (k: (typeof PRIVATE_LINES)[number]["key"], v: PrivateLineAnswer) => ed.commit((j) => void (j.privateLines = { ...(j.privateLines ?? {}), [k]: v }));
+  const privateYes = PRIVATE_LINES.filter((p) => job.privateLines?.[p.key] === "yes");
 
   async function request() {
     setError(null);
@@ -52,6 +92,54 @@ export function LocatePanel() {
 
   return (
     <Panel title="Utilities and 811" id="locate-h">
+      <div className={s.callout}>
+        <strong>Likely utilities</strong>
+        <span>A head start from public maps and the aerial, so you know what to expect when the paint goes down. These are guesses. Nothing here is located until 811 marks it.</span>
+        <div className="row">
+          <button className="btn sm" onClick={find} disabled={finding || (!job.site.origin && !claudeOk)}>{finding ? "Looking" : likely.length ? "Look again" : "Find likely utilities"}</button>
+          {likely.length > 0 && <button className="link" onClick={() => ed.commit((j) => void (j.likely = []))}>Clear</button>}
+        </div>
+        {findMsg && <span className="small muted" role="status">{findMsg}</span>}
+      </div>
+      {likely.length > 0 && (
+        <div>
+          {likely.map((l) => (
+            <div key={l.id} className={s.item}>
+              <div className={s.line}>
+                <span className="swatch" style={{ background: "transparent", border: `2px dashed ${UTILITIES[l.type].color}` }} />
+                <span className={s.grow}>
+                  {l.label} <span className="small muted">· {l.source === "public" ? "public map" : "seen on aerial"}{l.overhead ? " · overhead" : ""}</span>
+                </span>
+                <button className="link" onClick={() => ed.commit((j) => void (j.likely = (j.likely ?? []).filter((x) => x.id !== l.id)))}>Dismiss</button>
+              </div>
+            </div>
+          ))}
+          <p className="small muted">
+            Dashed and not located. {likely.some((l) => l.source === "public") && <>Public data © OpenStreetMap contributors. </>}
+            Check large gas and hazardous pipelines on the{" "}
+            <a className="link" href="https://www.npms.phmsa.dot.gov/AboutPublicViewer.aspx" target="_blank" rel="noreferrer">national pipeline map ↗</a>.
+          </p>
+        </div>
+      )}
+
+      <div className="stack" style={{ "--gap": "6px" } as React.CSSProperties}>
+        <span className="label">Private lines 811 will not mark</span>
+        <p className="small muted">Utilities only mark up to the meter. Ask the homeowner about these before anyone digs.</p>
+        {PRIVATE_LINES.map((p) => (
+          <div key={p.key} className={s.line}>
+            <span className="swatch" style={{ background: UTILITIES[p.type].color }} />
+            <span className={s.grow}>{p.name}</span>
+            <div className="seg" role="group" aria-label={p.name}>
+              {(["yes", "no", "unsure"] as const).map((v) => (
+                <button key={v} aria-pressed={job.privateLines?.[p.key] === v} onClick={() => setPrivate(p.key, v)}>{v === "yes" ? "Yes" : v === "no" ? "No" : "Not sure"}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {privateYes.length > 0 && <p className="small">Mark these by hand or hire a private locator. Then trace them with Mark a line.</p>}
+      </div>
+
+      <span className="label">Marked lines</span>
       <div className={s.line}>
         <select className="select" style={{ flex: "1 1 160px", width: "auto" }} value={ed.utilityType} onChange={(e) => ed.set({ utilityType: e.target.value as UtilityType })} aria-label="Utility type">
           {(Object.keys(UTILITIES) as UtilityType[]).map((k) => (
@@ -66,7 +154,7 @@ export function LocatePanel() {
             <div key={u.id} className={s.item}>
               <div className={s.line}>
                 <span className="swatch" style={{ background: UTILITIES[u.type].color }} />
-                <span className={s.grow}>{UTILITIES[u.type].name} · <span className="num">{Math.round(perimeter(u.pts, false))} ft</span></span>
+                <span className={s.grow}>{UTILITIES[u.type].name} · <span className="num">{Math.round(perimeter(u.pts, false))} ft</span>{u.source === "photo" && <span className="small muted"> · traced from photo</span>}</span>
                 <button className="link" onClick={() => ed.set({ selection: { kind: "utility", id: u.id }, tool: "select" })}>Adjust</button>
                 <button className="link" onClick={() => ed.commit((j) => void (j.utilities = j.utilities.filter((x) => x.id !== u.id)))}>Remove</button>
               </div>
@@ -75,6 +163,13 @@ export function LocatePanel() {
         </div>
       )}
       <p className="small muted">Each mark shows a 2 ft hand dig band on both sides. Areas and plants inside it get flagged.</p>
+      <div className="row">
+        <button className="btn sm quiet" onClick={trace} disabled={tracing || !photo?.dataUrl || !claudeOk} title={!claudeOk ? "Connect Claude in Settings" : !photo ? "Add a site photo of the paint first" : undefined}>
+          {tracing ? "Tracing" : "Trace paint from a photo"}
+        </button>
+        <span className="small muted">{!photo ? "Add a photo of the paint and flags under Site photos." : photo.camera ? `Uses ${photo.name}.` : `Uses ${photo.name}. Place it on the plan first for a better trace.`}</span>
+      </div>
+      {traceMsg && <p className="small muted" role="status">{traceMsg}</p>}
 
       <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
         <div className={s.grid2}>
