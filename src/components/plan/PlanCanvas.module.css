@@ -136,3 +136,13 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse, .pulseLine { animation: none; }
 }
+
+/* Sharper tiles fade in over the base so zooming never flashes gray. */
+.detail {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.detail.loaded {
+  opacity: 1;
+}

@@ -6,7 +6,7 @@ import type { Job, Pt } from "@/lib/types";
  * The open job plus everything the plan canvas needs: tools, selection,
  * camera, and an undo history of committed changes.
  */
-export type Tool = "select" | "outline" | "rect" | "circle" | "scale" | "lot" | "utility" | "camera" | "plant" | "pickLot";
+export type Tool = "select" | "outline" | "rect" | "circle" | "scale" | "lot" | "utility" | "camera" | "plant" | "pickLot" | "splitLot";
 
 export type Selection =
   | { kind: "area"; id: string }
