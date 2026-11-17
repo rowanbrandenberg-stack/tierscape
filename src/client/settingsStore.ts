@@ -22,6 +22,14 @@ export const useSettings = create<SettingsState>()(
         }),
       reset: () => set(defaultSettings()),
     }),
-    { name: "tierscape.settings", version: 1 },
+    {
+      name: "tierscape.settings",
+      version: 1,
+      // Saved settings from older versions lack newer profile fields, so fill them from the defaults.
+      merge: (saved, current) => {
+        const s = (saved ?? {}) as Partial<Settings>;
+        return { ...current, ...s, profile: { ...current.profile, ...(s.profile ?? {}) }, pricing: { ...current.pricing, ...(s.pricing ?? {}) } };
+      },
+    },
   ),
 );

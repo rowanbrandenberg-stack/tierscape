@@ -12,6 +12,23 @@ export interface Profile {
   accentColor: string;
   /** Data URL of the uploaded logo. */
   logo: string | null;
+  /** The warranty the homeowner agrees to. Reviewed before any proposal is shared. */
+  warranty: string;
+}
+
+export const DEFAULT_WARRANTY =
+  "Plants are guaranteed for one growing season when watered as instructed. Workmanship on patios, edging and irrigation is guaranteed for one year. Damage from weather, animals or neglect is not covered.";
+
+/** Profile values still at the sample defaults, which must never reach a homeowner. */
+export function profileProblems(p: Profile): string[] {
+  const d = defaultSettings().profile;
+  const out: string[] = [];
+  if (!p.company.trim() || p.company === d.company) out.push("Set your company name.");
+  if (!p.license.trim() || p.license === d.license) out.push("Set your contractor license number.");
+  if (!p.email.trim() || p.email === d.email) out.push("Set an email so the homeowner can accept.");
+  if (!p.phone.trim() || p.phone === d.phone) out.push("Set your phone number.");
+  if (!p.warranty?.trim()) out.push("Write your warranty terms.");
+  return out;
 }
 
 export interface Pricing {
@@ -42,6 +59,7 @@ export function defaultSettings(): Settings {
       brandColor: "#1d4a35",
       accentColor: "#b8662e",
       logo: null,
+      warranty: DEFAULT_WARRANTY,
     },
     pricing: {
       laborRate: 65,

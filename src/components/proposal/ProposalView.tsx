@@ -5,6 +5,7 @@ import { useSettings } from "@/client/settingsStore";
 import { yardIllustration } from "@/lib/illustration";
 import { money, quote } from "@/lib/pricing";
 import { TIERS } from "@/lib/types";
+import { ShareReview } from "./ShareReview";
 import s from "./ProposalView.module.css";
 
 const today = () => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -18,6 +19,7 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
   const half = Math.round(q.price / 2);
   const [name, setName] = useState("");
   const [err, setErr] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const photo = job.photos.find((p) => p.id === job.activePhotoId);
   const placed = job.plants.filter((p) => p.spots.length);
   const initials = profile.company.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -31,7 +33,9 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
           <button aria-pressed={job.terms === "bid"} onClick={() => ed.commit((j) => void (j.terms = "bid"))}>Fixed bid, paid on completion</button>
         </div>
         <button className="btn sm quiet" onClick={() => window.print()}>Print or save PDF</button>
+        <button className="btn sm solid" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}>Share with homeowner</button>
       </div>
+      {sharing && <ShareReview onClose={() => setSharing(false)} />}
 
       <article className={s.doc} style={{ "--brand": profile.brandColor, "--accent": profile.accentColor } as React.CSSProperties}>
         <header className={s.letterhead}>
@@ -110,7 +114,7 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
           <ol className={s.terms}>
             <li>We will locate underground utilities through 811 before any digging. Work starts once every utility has responded.</li>
             <li>Changes to the scope are priced in writing before the work is done.</li>
-            <li>Plants are guaranteed for one growing season when watered as instructed. Damage from weather, animals or neglect is not covered.</li>
+            <li>{profile.warranty || "Plants are guaranteed for one growing season when watered as instructed. Damage from weather, animals or neglect is not covered."}</li>
             <li>{job.terms === "split" ? "The deposit secures your place on the schedule and orders materials. The balance is due when the work is complete." : "Payment is due in full when the work is complete."}</li>
             <li>Property lines come from public parcel maps and are approximate. Work along a boundary needs the corners confirmed first.</li>
           </ol>

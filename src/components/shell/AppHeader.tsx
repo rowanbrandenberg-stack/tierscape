@@ -16,6 +16,8 @@ export function Mark({ size = 18 }: { size?: number }) {
 export function AppHeader() {
   const path = usePathname();
   const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p));
+  // Homeowners see their proposal with the contractor's brand, never the app around it.
+  if (path === "/p" || path.startsWith("/p/")) return null;
   return (
     <header className={s.wrap}>
       <div className={s.bar}>
