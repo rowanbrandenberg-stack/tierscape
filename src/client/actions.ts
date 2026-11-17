@@ -89,7 +89,7 @@ export async function pickLotAt(q: Pt) {
   if (!job || !origin) return;
   ed().set({ draft: [q], lotNotice: "Looking up that lot." });
   try {
-    const { parcel } = await api.parcelAt(toGeo(origin, q));
+    const { parcel } = await api.parcelAt({ ...toGeo(origin, q), county: job.site.county });
     const pts = parcel.ring.map((p) => round1(toPlan(origin, p)));
     const [a, b] = [pts[0], pts[pts.length - 1]];
     if (pts.length > 3 && Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.05) pts.pop();

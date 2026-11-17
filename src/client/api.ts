@@ -32,7 +32,7 @@ export const api = {
     return call<{ suggestions: string[] }>(`/api/address/suggest?${p}`, { signal });
   },
   site: (address: string) => call<{ site: Site; notes: { parcel: string | null; imagery: string | null } }>("/api/site", post({ address })),
-  parcelAt: (p: { lat: number; lon: number }) =>
+  parcelAt: (p: { lat: number; lon: number; county?: string | null }) =>
     call<{ parcel: { apn: string | null; address: string | null; ring: { lat: number; lon: number }[]; source: string } }>("/api/parcels/at", post(p)),
   publicUtilities: (p: { lat: number; lon: number; radiusM?: number }) =>
     call<{ features: { type: UtilityType; label: string; pts: { lat: number; lon: number }[]; overhead: boolean }[]; credit: string }>("/api/utilities/public", post(p)),
