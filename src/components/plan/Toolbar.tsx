@@ -19,6 +19,7 @@ const HINTS: Partial<Record<Tool, [string, string, string]>> = {
   utility: ["Click along the marked line.", "Keep clicking along the line.", "Click the last point again or Finish."],
   rect: ["Click one corner.", "Now click the opposite corner.", ""],
   circle: ["Click the center.", "Now click the outer edge.", ""],
+  pickLot: ["Click inside the right lot on the aerial.", "Looking up that lot.", ""],
   camera: ["Click where you stood to take the photo.", "Now click the direction the camera faced.", ""],
 };
 

@@ -2,6 +2,8 @@
 import { newArea, uid } from "@/lib/jobs";
 import { round1 } from "@/lib/geometry";
 import type { Area, Pt } from "@/lib/types";
+import { toGeo, toPlan } from "@/lib/projection";
+import { api, ApiError } from "./api";
 import { useEditor } from "./editor";
 
 /** Editor actions shared by the canvas, the toolbar and keyboard shortcuts. */
@@ -78,4 +80,25 @@ export function deleteSelection() {
     else j.utilities = j.utilities.filter((u) => u.id !== selection.id);
   });
   ed().set({ selection: null });
+}
+
+/** Replace the property line with the parcel under a clicked plan point. */
+export async function pickLotAt(q: Pt) {
+  const job = ed().job;
+  const origin = job?.site.origin;
+  if (!job || !origin) return;
+  ed().set({ draft: [q], lotNotice: "Looking up that lot." });
+  try {
+    const { parcel } = await api.parcelAt(toGeo(origin, q));
+    const pts = parcel.ring.map((p) => round1(toPlan(origin, p)));
+    const [a, b] = [pts[0], pts[pts.length - 1]];
+    if (pts.length > 3 && Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.05) pts.pop();
+    ed().commit((j) => {
+      j.lot = pts;
+      j.site.parcel = { apn: parcel.apn, address: parcel.address, pts, source: parcel.source, matchedBy: "picked" };
+    });
+    ed().set({ tool: "select", draft: [], lotNotice: null });
+  } catch (e) {
+    ed().set({ draft: [], lotNotice: e instanceof ApiError ? e.message : "Could not look up that lot." });
+  }
 }

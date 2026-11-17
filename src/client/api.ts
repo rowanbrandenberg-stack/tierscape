@@ -24,6 +24,8 @@ const post = (body: unknown): RequestInit => ({ method: "POST", headers: { "cont
 export const api = {
   features: () => call<Features>("/api/config"),
   site: (address: string) => call<{ site: Site; notes: { parcel: string | null; imagery: string | null } }>("/api/site", post({ address })),
+  parcelAt: (p: { lat: number; lon: number }) =>
+    call<{ parcel: { apn: string | null; address: string | null; ring: { lat: number; lon: number }[]; source: string } }>("/api/parcels/at", post(p)),
   estimate: (location: string, plants: { name: string; kind: string }[]) =>
     call<{ estimates: { name: string; height_ft: number; spread_ft: number; note: string }[] }>("/api/plants/estimate", post({ location, plants })),
   locatePhoto: (plan: Blob, photo: Blob) => {

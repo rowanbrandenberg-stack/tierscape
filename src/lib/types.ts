@@ -88,6 +88,8 @@ export interface Parcel {
   address: string | null;
   pts: Pt[];
   source: string;
+  /** How the lot was found. "nearest" means the address did not confirm it. */
+  matchedBy?: "address" | "nearest" | "picked";
 }
 
 export interface Site {

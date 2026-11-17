@@ -13,7 +13,8 @@ export async function POST(req: Request) {
     const { address } = (await req.json()) as { address?: string };
     if (!address || address.trim().length < 6) throw new ProviderError("Enter a full street address.", 400, "bad_request");
     const g = await geocode(address.trim());
-    const parcel = await findParcel(g);
+    const found = await findParcel(g);
+    const parcel = found?.parcel ?? null;
     const origin = parcel
       ? { lat: parcel.ring.reduce((s, p) => s + p.lat, 0) / parcel.ring.length, lon: parcel.ring.reduce((s, p) => s + p.lon, 0) / parcel.ring.length }
       : { lat: g.lat, lon: g.lon };
@@ -27,10 +28,10 @@ export async function POST(req: Request) {
       county: g.county,
       origin,
       extent: extentAround(pts ?? [[-50, -35], [50, 35]], 30),
-      parcel: pts ? { apn: parcel!.apn, address: parcel!.address, pts, source: parcel!.source } : null,
+      parcel: pts ? { apn: parcel!.apn, address: parcel!.address, pts, source: parcel!.source, matchedBy: found!.by } : null,
       imagery: img.ok ? { provider: imageryLabel(), zoom: PLAN_ZOOM } : null,
     };
-    return Response.json({ site, notes: { parcel: parcel ? null : "No parcel line found for this address. Draw the property line by hand.", imagery: img.ok ? null : img.why } });
+    return Response.json({ site, notes: { parcel: !parcel ? "No parcel line found for this address. Draw the property line by hand." : found!.by === "nearest" ? "The county record did not confirm this address, so this is the closest lot. If it is the wrong house, use Wrong lot under Property line and click the right one." : null, imagery: img.ok ? null : img.why } });
   } catch (e) {
     return jsonError(e);
   }

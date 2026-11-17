@@ -5,7 +5,7 @@ import { useSettings } from "@/client/settingsStore";
 import { FOV } from "@/lib/camera";
 import { GENERIC_SIZE, UTILITIES } from "@/lib/catalog";
 import { areaSqft, centroid, circle, dist, edgeOn, pointInPolygon, rectangle, round1, snapCorner, snapNext } from "@/lib/geometry";
-import { addArea, finishDraft } from "@/client/actions";
+import { addArea, finishDraft, pickLotAt } from "@/client/actions";
 import { serviceFor } from "@/lib/pricing";
 import { tilesForExtent } from "@/lib/projection";
 import type { Pt } from "@/lib/types";
@@ -164,6 +164,10 @@ export function PlanCanvas() {
     const near = (a: Pt | undefined) => !!a && dist(a, q) < 10 * u;
     if (placingPlantId) {
       ed.commit((j) => void j.plants.find((p) => p.id === placingPlantId)?.spots.push(round1(q)));
+      return;
+    }
+    if (tool === "pickLot") {
+      if (!draft.length) void pickLotAt(q);
       return;
     }
     if (tool === "select") {

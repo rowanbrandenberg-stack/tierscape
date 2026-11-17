@@ -21,10 +21,21 @@ export function LotPanel() {
             </span>
             <button className="btn sm quiet" onClick={() => ed.set({ selection: on ? null : { kind: "lot" }, tool: "select", draft: [] })}>{on ? "Done" : "Adjust"}</button>
           </div>
+          {parcel?.matchedBy === "nearest" && (
+            <p className="small" style={{ color: "var(--warn, #9a5b00)" }}>
+              The county record did not confirm this address, so this is the closest lot. Check it against the house.
+            </p>
+          )}
           <p className="small muted">
+            {parcel?.address ? `County record: ${parcel.address}${parcel.apn ? `, APN ${parcel.apn}` : ""}. ` : ""}
             {parcel ? `From ${parcel.source}. ` : "Drawn by hand. "}Parcel maps are approximate; confirm the pins before building on the line.
           </p>
           <div className="row">
+            {job.site.origin && (
+              <button className="link" onClick={() => ed.set({ tool: ed.tool === "pickLot" ? "select" : "pickLot", draft: [], selection: null, placingPlantId: null, lotNotice: null })}>
+                {ed.tool === "pickLot" ? "Cancel" : "Wrong lot? Pick it on the map"}
+              </button>
+            )}
             {parcel && <button className="link" onClick={() => ed.commit((j) => void (j.lot = parcel.pts))}>Reset to the parcel map</button>}
             <button className="link" onClick={() => ed.commit((j) => void (j.lot = null))}>Remove</button>
           </div>
@@ -34,9 +45,13 @@ export function LotPanel() {
           <p className="small muted">{job.sample ? "No parcel data for the sample lot." : "No parcel line was found for this address."} Trace it from the pins or the plat.</p>
           <div>
             <button className="btn sm" onClick={() => ed.set({ tool: "lot", draft: [], selection: null, placingPlantId: null })}>Draw property line</button>
+            {job.site.origin && (
+              <button className="btn sm quiet" onClick={() => ed.set({ tool: "pickLot", draft: [], selection: null, placingPlantId: null, lotNotice: null })}>Pick lot on the map</button>
+            )}
           </div>
         </div>
       )}
+      {ed.lotNotice && <p className="small muted">{ed.lotNotice}</p>}
     </Panel>
   );
 }

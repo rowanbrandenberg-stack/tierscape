@@ -6,7 +6,7 @@ import type { Job, Pt } from "@/lib/types";
  * The open job plus everything the plan canvas needs: tools, selection,
  * camera, and an undo history of committed changes.
  */
-export type Tool = "select" | "outline" | "rect" | "circle" | "scale" | "lot" | "utility" | "camera" | "plant";
+export type Tool = "select" | "outline" | "rect" | "circle" | "scale" | "lot" | "utility" | "camera" | "plant" | "pickLot";
 
 export type Selection =
   | { kind: "area"; id: string }
@@ -34,6 +34,8 @@ interface EditorState {
   snapDeg: number;
   view: View | null;
   colorAerial: boolean;
+  /** A short status line for the property line panel. */
+  lotNotice: string | null;
   load: (job: Job) => void;
   /** Apply a change and record it for undo. */
   commit: (fn: (j: Job) => void) => void;
@@ -61,6 +63,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   snapDeg: 90,
   view: null,
   colorAerial: true,
+  lotNotice: null,
   load: (job) => set({ job, past: [], future: [], tool: "select", draft: [], selection: null, placingPlantId: null, view: { ...job.site.extent } }),
   commit: (fn) => {
     const { job, past } = get();
