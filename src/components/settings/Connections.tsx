@@ -5,7 +5,7 @@ import s from "./settings.module.css";
 const ROWS = [
   { key: "imagery", name: "Aerial imagery", on: "Loads automatically for every address." },
   { key: "regrid", name: "Parcel lines outside Arizona", on: "Nationwide parcel lines through Regrid." },
-  { key: "claude", name: "Growth estimates and photo matching", on: "Claude sizes plants for the location and places site photos on the plan." },
+  { key: "claude", name: "AI assist", on: "Sizes plants for the location, places site photos, finds likely utilities and traces locator paint." },
   { key: "render", name: "Photo renders", on: "Each tier rendered from the homeowner's own photo." },
   { key: "onecall", name: "Direct 811 submission", on: "Locate requests go straight to the one call center." },
 ] as const;
@@ -16,7 +16,7 @@ export function Connections() {
     <section className={s.section} aria-labelledby="conn-h">
       <div className={s.aside}>
         <h2 id="conn-h" className="head">Connections</h2>
-        <p className="small muted">Set on the server. Arizona parcel lines and address lookup are always on and free.</p>
+        <p className="small muted">What is turned on for your account. Address lookup and Arizona property lines are always on.</p>
       </div>
       <div className={s.content}>
         <ul className={s.conns}>

@@ -1,5 +1,5 @@
-import { AREA_TYPES, COLORS, LAYOUTS, SIZES, type Service, type Unit } from "./catalog";
-import { areaPerimeter, areaSqft, borderedLength } from "./geometry";
+import { AREA_TYPES, COLORS, isPlantFill, LAYOUTS, SIZES, type Service, type Unit } from "./catalog";
+import { areaPerimeter, areaSqft, borderedLength, pointInPolygon } from "./geometry";
 import type { Pricing } from "./settings";
 import type { Area, AreaType, Job, TierKey } from "./types";
 
@@ -77,19 +77,27 @@ export function quote(job: Pick<Job, "areas" | "plants">, pricing: Pricing, tier
     let sqft = 0;
     let h = 0;
     let borderHours = 0;
+    let plantedPerPlan = 0;
+    let allowance = 0;
 
     for (const a of areas) {
+      // Plants placed on the plan replace the bed's generic planting allowance, so nothing is counted twice.
+      const placedHere = job.plants.some((p) => p.spots.some((s) => pointInPolygon(s, a.pts)));
       const A = areaSqft(a);
       const P = areaPerimeter(a);
       const layout = LAYOUTS[a.paver.layout];
       const size = SIZES[a.paver.size];
       const laborMult = isPaver ? layout.labor * (a.paver.layout === "ashlar" ? 1 : size.labor) : 1;
       sqft += A;
+      const hasFill = svc.items.some(isPlantFill);
+      if (hasFill && placedHere) plantedPerPlan++;
+      else if (hasFill) allowance++;
       for (const it of svc.items) {
         if (it.per === "job") continue;
+        if (placedHere && isPlantFill(it)) continue;
         let raw = it.per === "sqft" ? A * it.qty : P * it.qty;
         let cost = it.cost;
-        let name = it.name;
+        let name = isPlantFill(it) ? `Planting allowance: ${it.name}` : it.name;
         if (it.bulk) raw *= 1 + (it.paver && isPaver ? layout.waste : pricing.wastePct) / 100;
         if (it.paver && isPaver) {
           cost *= a.paver.layout === "ashlar" ? 1.1 : size.material;
@@ -134,6 +142,7 @@ export function quote(job: Pick<Job, "areas" | "plants">, pricing: Pricing, tier
     }
     const title =
       svc.title +
+      (plantedPerPlan && !allowance ? ", planted as shown on the plan" : plantedPerPlan && allowance ? ", planted as shown, plus a planting allowance for the unplanned beds" : "") +
       (paverNotes.length ? `, ${paverNotes.join(" and ")}` : "") +
       (borderNames.length ? `, edged with ${borderNames.join(" and ").toLowerCase()}` : "");
     groups.push({
@@ -191,5 +200,12 @@ export function unitPrice(pricing: Pricing, svc: Service): number {
   }
   return ((m + 400 * svc.laborPerSqft * pricing.laborRate) * (1 + pricing.markupPct / 100)) / 400;
 }
+
+/** Margin is profit over price; markup is profit over cost. 35% markup is about 26% margin. */
+export const marginFromMarkup = (markupPct: number) => (markupPct / (100 + markupPct)) * 100;
+export const markupFromMargin = (marginPct: number) => {
+  const m = Math.min(90, Math.max(0, marginPct));
+  return Math.round(((m / (100 - m)) * 100) * 100) / 100;
+};
 
 export const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");

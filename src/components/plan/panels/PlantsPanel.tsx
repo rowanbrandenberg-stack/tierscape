@@ -61,7 +61,7 @@ export function PlantsPanel() {
         )}
       </div>
       <p className="small muted" aria-live="polite">
-        {msg ?? (features && !features.claude.ok ? "Growth estimates need Claude configured on the server." : "Each tier installs the same plants at a bigger container size.")}
+        {msg ?? (features && !features.claude.ok ? "Growth estimates are not available on your plan yet." : "Each tier installs the same plants at a bigger container size.")}
       </p>
     </Panel>
   );

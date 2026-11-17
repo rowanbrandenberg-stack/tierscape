@@ -23,18 +23,18 @@ export const config = {
  */
 export function imageryReady(): { ok: boolean; why?: string } {
   const c = config.imagery;
-  if (c.provider === "nearmap") return c.nearmapKey ? { ok: true } : { ok: false, why: "Set NEARMAP_API_KEY to load Nearmap imagery." };
+  if (c.provider === "nearmap") return c.nearmapKey ? { ok: true } : { ok: false, why: "Aerial imagery is not turned on yet." };
   if (c.arcgisKey || !isProd) return { ok: true };
-  return { ok: false, why: "Set ARCGIS_API_KEY to load Esri imagery in production." };
+  return { ok: false, why: "Aerial imagery is not turned on yet." };
 }
 
 export function features() {
   return {
     imagery: imageryReady(),
-    claude: config.anthropic.key && config.anthropic.model ? { ok: true } : { ok: false, why: "Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL." },
-    render: config.render.openaiKey ? { ok: true } : { ok: false, why: "Set OPENAI_API_KEY to generate photo renders." },
+    claude: config.anthropic.key && config.anthropic.model ? { ok: true } : { ok: false, why: "Not available on your plan yet." },
+    render: config.render.openaiKey ? { ok: true } : { ok: false, why: "Not available on your plan yet. Tiers show as sketches." },
     onecall: config.onecall.provider ? { ok: true } : { ok: false, why: "No 811 integration yet. Tickets are prepared for you to submit." },
-    regrid: config.regridToken ? { ok: true } : { ok: false, why: "Set REGRID_API_TOKEN for parcel lines outside Arizona." },
+    regrid: config.regridToken ? { ok: true } : { ok: false, why: "Coming soon. Outside Arizona, draw the property line by hand." },
   };
 }
 export type Features = ReturnType<typeof features>;
