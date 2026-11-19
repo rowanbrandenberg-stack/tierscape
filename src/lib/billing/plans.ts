@@ -112,11 +112,22 @@ export const annualIsTwoMonthsFree = (p: Plan) => p.annual === p.monthly * 10;
 export const usd = (n: number, cents = false) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
 
-/** A plan can be bought only when everything it advertises works and accounts exist to attach it to. */
-export function sellable(key: PlanKey, accountsReady: boolean): { ok: boolean; missing: string[] } {
-  const missing = PLANS[key].features.filter((f) => !FEATURES[f].ready).map((f) => FEATURES[f].label);
-  if (!accountsReady) missing.unshift("Sign in and estimator accounts");
-  return { ok: missing.length === 0, missing };
+/** What a plan adds over the plan below it. */
+export function distinguishing(key: PlanKey): FeatureKey[] {
+  const below = key === "team" ? PLANS.pro.features : key === "pro" ? PLANS.starter.features : [];
+  return PLANS[key].features.filter((f) => !below.includes(f));
+}
+
+/**
+ * A plan can be bought when accounts exist and the core of what it adds over
+ * the plan below works today. Anything not built yet is shown as coming soon,
+ * never as included. Team stays coming soon until its own features exist.
+ */
+export function sellable(key: PlanKey, accountsReady: boolean): { ok: boolean; comingSoon: string[] } {
+  const own = distinguishing(key);
+  const comingSoon = PLANS[key].features.filter((f) => !FEATURES[f].ready).map((f) => FEATURES[f].label);
+  const core = own.filter((f) => FEATURES[f].ready).length > 0;
+  return { ok: accountsReady && core, comingSoon };
 }
 
 /* ---------- founding contractor offer ---------- */

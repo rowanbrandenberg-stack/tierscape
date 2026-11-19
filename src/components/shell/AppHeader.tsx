@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAccount } from "@/client/account";
 import s from "./AppHeader.module.css";
 
 export function Mark({ size = 18 }: { size?: number }) {
@@ -16,6 +17,7 @@ export function Mark({ size = 18 }: { size?: number }) {
 export function AppHeader() {
   const path = usePathname();
   const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p));
+  const me = useAccount((x) => x.me);
   // Homeowners see their proposal with the contractor's brand, never the app around it.
   if (path === "/p" || path.startsWith("/p/")) return null;
   return (
@@ -30,6 +32,7 @@ export function AppHeader() {
           <Link href="/pricing" aria-current={on("/pricing") ? "page" : undefined}>Pricing</Link>
           <Link href="/account" aria-current={on("/account") ? "page" : undefined}>Account</Link>
           <Link href="/settings" aria-current={on("/settings") ? "page" : undefined}>Settings</Link>
+          {me?.accounts && !me.signedIn && <Link href="/signin" aria-current={on("/signin") ? "page" : undefined}>Sign in</Link>}
         </nav>
       </div>
     </header>

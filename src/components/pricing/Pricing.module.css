@@ -542,3 +542,25 @@
     justify-content: center;
   }
 }
+
+.foundingBtn {
+  min-height: 48px;
+  padding: 0 22px;
+  margin: 4px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font: 600 15px/1 var(--sans);
+  cursor: pointer;
+}
+
+.foundingBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.foundingBtn:focus-visible {
+  outline: 3px solid #6aa883;
+  outline-offset: 2px;
+}

@@ -8,6 +8,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "./globals.css";
 import { AppHeader } from "@/components/shell/AppHeader";
 import { ManualAiDialog } from "@/components/shell/ManualAiDialog";
+import { CloudSync } from "@/client/CloudSync";
 
 export const metadata: Metadata = {
   title: { default: "Tierscape", template: "%s · Tierscape" },
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppHeader />
         {children}
         <ManualAiDialog />
+        <CloudSync />
       </body>
     </html>
   );

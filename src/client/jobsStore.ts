@@ -7,6 +7,8 @@ import type { Job } from "@/lib/types";
 interface JobsState {
   jobs: Record<string, Job>;
   save: (job: Job) => void;
+  /** Put a job in as is, keeping its own updatedAt. Used when loading from the cloud. */
+  put: (job: Job) => void;
   remove: (id: string) => void;
 }
 
@@ -17,6 +19,7 @@ export const useJobs = create<JobsState>()(
     (set) => ({
       jobs: {},
       save: (job) => set((s) => ({ jobs: { ...s.jobs, [job.id]: strip({ ...job, updatedAt: new Date().toISOString() }) } })),
+      put: (job) => set((s) => ({ jobs: { ...s.jobs, [job.id]: strip(job) } })),
       remove: (id) =>
         set((s) => {
           const jobs = { ...s.jobs };

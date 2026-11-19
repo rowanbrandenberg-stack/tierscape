@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useAccount } from "@/client/account";
 import { useJobs } from "@/client/jobsStore";
+import { browserDb } from "@/client/supabase";
+import { BillingPanel } from "./BillingPanel";
 import { useSettings } from "@/client/settingsStore";
 import { useMounted } from "@/client/useMounted";
-import { FOUNDING, PLANS, TRIAL, usd } from "@/lib/billing/plans";
+import { FOUNDING, IMAGES_ADVERTISED, PLANS, TRIAL, usd } from "@/lib/billing/plans";
 import s from "./Account.module.css";
-
-type Status = { checkout: boolean; why: string | null };
 
 const ROLES = [
   { role: "Owner", can: "Everything, including billing and cancelling." },
@@ -25,11 +25,8 @@ export function AccountCenter() {
   const mounted = useMounted();
   const jobs = useJobs((x) => x.jobs);
   const { profile, pricing } = useSettings();
-  const [status, setStatus] = useState<Status | null>(null);
-
-  useEffect(() => {
-    fetch("/api/billing/status").then((r) => r.json()).then(setStatus).catch(() => setStatus({ checkout: false, why: null }));
-  }, []);
+  const me = useAccount((x) => x.me);
+  const syncNote = useAccount((x) => x.syncNote);
 
   const list = Object.values(jobs).filter((j) => !j.sample);
 
@@ -59,19 +56,29 @@ export function AccountCenter() {
     URL.revokeObjectURL(a.href);
   }
 
-  const live = !!status?.checkout;
+  const signed = !!me?.signedIn && !!me.company && !!me.access;
   const initials = profile.company.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <main className={s.page}>
       <header className={s.head}>
         <p className="label">Account</p>
-        <h1 className={s.title}>{mounted ? profile.company : "Your company"}</h1>
-        {!live && (
-          <p className={s.banner} role="status">
-            Sign in and billing are not live yet. Your work is saved in this browser, and nothing is being charged. {status?.why ?? ""}
+        <h1 className={s.title}>{mounted ? (me?.company?.name ?? profile.company) : "Your company"}</h1>
+        {me?.signedIn && (
+          <p className={s.note}>
+            Signed in as {me.email}
+            {me.role ? `, ${me.role.replace("_", " ")}` : ""}.{" "}
+            <button className="link" onClick={async () => { await browserDb()?.auth.signOut(); await useAccount.getState().refresh(); }}>Sign out</button>
           </p>
         )}
+        {me && !me.accounts && <p className={s.banner} role="status">Accounts are not connected yet. Your work is saved in this browser, and nothing is being charged.</p>}
+        {me?.accounts && !me.signedIn && (
+          <p className={s.banner} role="status">
+            You are not signed in, so your work is saved in this browser only. <Link className="link" href="/signin?next=/account">Sign in</Link> to keep it in your account and use it on other devices.
+          </p>
+        )}
+        {me?.signedIn && !me.company && <p className={s.banner} role="status">Setting up your company…</p>}
+        {syncNote && <p className={s.banner} role="status">{syncNote}</p>}
       </header>
 
       <section className={s.section} aria-labelledby="sub-h">
@@ -80,16 +87,20 @@ export function AccountCenter() {
           <p className={s.note}>Only owners and billing admins can change billing.</p>
         </div>
         <div className={s.body}>
-          <dl className={s.facts}>
-            <div><dt>Current plan</dt><dd>{live ? "Loading" : "None"}</dd></div>
-            <div><dt>Billing</dt><dd>Not started</dd></div>
-            <div><dt>Next charge</dt><dd>None scheduled</dd></div>
-            <div><dt>Trial</dt><dd>Not started. {TRIAL.days} days of Pro, no card, once per company.</dd></div>
-          </dl>
-          <div className="row">
-            <Link className="btn solid" href="/pricing">See plans</Link>
-            <button className="btn" disabled title="Opens once billing is live">Invoices and payment method</button>
-          </div>
+          {signed ? (
+            <BillingPanel me={me!} />
+          ) : (
+            <>
+              <dl className={s.facts}>
+                <div><dt>Current plan</dt><dd>None</dd></div>
+                <div><dt>Next charge</dt><dd>None scheduled</dd></div>
+                <div><dt>Trial</dt><dd>{TRIAL.days} days of Pro, no card, once per company. Sign in to start it.</dd></div>
+              </dl>
+              <div className="row">
+                <Link className="btn solid" href={me?.accounts ? "/signin?next=/account" : "/pricing"}>{me?.accounts ? "Sign in" : "See plans"}</Link>
+              </div>
+            </>
+          )}
           <div className={s.explain}>
             <h3>How changes work</h3>
             <ul>
@@ -108,9 +119,7 @@ export function AccountCenter() {
         </div>
         <div className={s.body}>
           <p>Cancelling keeps your plan active until the end of the period you paid for, and the exact date is shown before you confirm. Afterwards you can still sign in to view and export everything. Reactivate any time before that date and nothing changes.</p>
-          <div className="row">
-            <button className="btn" disabled title="Available once you have a plan">Cancel plan</button>
-          </div>
+          <p className="small">{me?.subscription ? "Use Cancel plan in Plan and billing above." : "Available once you have a plan."}</p>
         </div>
       </section>
 
@@ -122,7 +131,14 @@ export function AccountCenter() {
           <dl className={s.facts}>
             <div><dt>Jobs</dt><dd className="num">{mounted ? list.length : "…"} saved</dd></div>
             <div><dt>Estimator accounts</dt><dd>Starter includes {PLANS.starter.estimators}, Pro {PLANS.pro.estimators}, Team {PLANS.team.estimators}. Crew do not count.</dd></div>
-            <div><dt>AI images</dt><dd>Not offered yet. Allowances appear here with their reset dates once rendering is validated.</dd></div>
+            <div>
+              <dt>AI images</dt>
+              <dd>
+                {IMAGES_ADVERTISED && me?.usage && me.usage.images.allowance > 0
+                  ? `${me.usage.images.used} of ${me.usage.images.allowance} used${me.usage.images.resetsAt ? `, resets ${new Date(me.usage.images.resetsAt).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}`
+                  : "Not offered yet. Allowances appear here with their reset dates once rendering is validated."}
+              </dd>
+            </div>
           </dl>
         </div>
       </section>
@@ -147,7 +163,7 @@ export function AccountCenter() {
       <section className={s.section} aria-labelledby="team-h">
         <div className={s.aside}>
           <h2 id="team-h" className={s.h2}>Team and roles</h2>
-          <p className={s.note}>Inviting people opens with sign in.</p>
+          <p className={s.note}>Inviting teammates is coming next.</p>
         </div>
         <div className={s.body}>
           <table className={s.roles}>

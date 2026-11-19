@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAccount } from "@/client/account";
 import { track } from "@/client/track";
 import { annualMonthly, annualSavings, FEATURES, FOUNDING, foundingSavings, PLAN_ORDER, PLANS, sellable, usd, type Cadence, type FeatureKey, type PlanKey } from "@/lib/billing/plans";
 import s from "./Pricing.module.css";
@@ -47,6 +48,26 @@ const FAQ: { q: string; a: string }[] = [
 export function PricingPage() {
   const [cadence, setCadence] = useState<Cadence>("monthly");
   const [status, setStatus] = useState<Status | null>(null);
+  const me = useAccount((x) => x.me);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [buyErr, setBuyErr] = useState<string | null>(null);
+  const hasPlan = !!me?.subscription && ["active", "past_due", "trialing"].includes(me.subscription.status);
+
+  async function buy(plan: PlanKey, c: Cadence, founding = false) {
+    track("plan_select", { plan: founding ? "founding" : plan, cadence: c });
+    if (!me?.signedIn) return void (window.location.href = "/signin?next=/pricing");
+    setBusy(founding ? "founding" : plan);
+    setBuyErr(null);
+    try {
+      const r = await fetch("/api/billing/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan, cadence: c, founding }) });
+      const j = (await r.json()) as { url?: string; message?: string };
+      if (!r.ok || !j.url) throw new Error(j.message ?? "Checkout could not start.");
+      window.location.href = j.url;
+    } catch (e) {
+      setBuyErr(e instanceof Error ? e.message : "Checkout could not start.");
+      setBusy(null);
+    }
+  }
   const [hours, setHours] = useState("4");
   const [rate, setRate] = useState("50");
   const [calcPlan, setCalcPlan] = useState<PlanKey>("pro");
@@ -79,7 +100,7 @@ export function PricingPage() {
           const p = PLANS[k];
           const featured = k === "pro";
           const sale = sellable(k, !!status?.checkout);
-          const comingSoon = k === "team" && PLANS.team.features.some((f) => !FEATURES[f].ready);
+          const comingSoon = !sellable(k, true).ok;
           const extras = p.features.filter((f) => !(k !== "starter" && PLANS[k === "team" ? "pro" : "starter"].features.includes(f)));
           return (
             <article key={k} className={`${s.card} ${featured ? s.featured : ""}`} aria-labelledby={`plan-${k}`}>
@@ -108,10 +129,15 @@ export function PricingPage() {
               <p className={s.outcome}>{p.outcome}</p>
               {comingSoon ? (
                 <button className={s.cta} disabled>Coming soon</button>
-              ) : sale.ok ? (
-                <button className={`${s.cta} ${featured ? s.ctaMain : ""}`} onClick={() => { track("plan_select", { plan: k, cadence }); track("checkout_start", { plan: k, cadence }); }}>
-                  Choose {p.name}
-                </button>
+              ) : sale.ok && hasPlan ? (
+                <Link className={`${s.cta} ${featured ? s.ctaMain : ""}`} href="/account">{me?.subscription?.plan === k ? "Your plan" : "Change plan in your account"}</Link>
+              ) : sale.ok && status?.checkout ? (
+                <>
+                  <button className={`${s.cta} ${featured ? s.ctaMain : ""}`} disabled={!!busy || (me?.signedIn && !me.canManageBilling)} onClick={() => buy(k, cadence)}>
+                    {busy === k ? "Opening checkout" : me?.signedIn ? `Choose ${p.name}` : `Sign in to choose ${p.name}`}
+                  </button>
+                  <span className={s.ctaNote}>{me?.signedIn && !me.canManageBilling ? "Ask your company owner to choose a plan." : "Prices in USD. Tax shown at checkout."}</span>
+                </>
               ) : (
                 <>
                   <Link className={`${s.cta} ${featured ? s.ctaMain : ""}`} href="/" onClick={() => track("plan_select", { plan: k, cadence })}>
@@ -135,6 +161,7 @@ export function PricingPage() {
         })}
       </section>
 
+      {buyErr && <p className="warn" role="alert" style={{ marginTop: -40 }}>{buyErr}</p>}
       <section className={s.founding} aria-labelledby="founding-h">
         <div>
           <p className={s.foundingLabel} id="founding-h">Founding contractor offer</p>
@@ -143,6 +170,13 @@ export function PricingPage() {
         </div>
         <div className={s.foundingSide}>
           <p>Save {usd(foundingSavings())} over your first {FOUNDING.periods} paid months compared with standard monthly pricing.</p>
+          {status?.checkout && !hasPlan && !me?.foundingUsed && status.founding.remaining !== 0 && (
+            <button className={s.foundingBtn} disabled={!!busy || (me?.signedIn && !me.canManageBilling)} onClick={() => buy("pro", "monthly", true)}>
+              {busy === "founding" ? "Opening checkout" : me?.signedIn ? "Claim the founding price" : "Sign in to claim the founding price"}
+            </button>
+          )}
+          {me?.foundingUsed && <p className="small">Your company has already used the founding offer.</p>}
+          {status?.founding.remaining === 0 && <p className="small">All founding places have been taken.</p>}
           <p className="small">
             {status?.founding.remaining != null ? `${status.founding.remaining} of ${status.founding.limit} places left.` : `Limited to the first ${FOUNDING.limit} paying companies.`} One per company, monthly Pro only, and not combined with annual pricing. Starting a trial does not hold a place.
           </p>

@@ -20,6 +20,8 @@ export async function getJson<T>(url: string, init?: RequestInit, timeoutMs = 12
 }
 
 export function jsonError(e: unknown) {
-  const err = e instanceof ProviderError ? e : new ProviderError(e instanceof Error ? e.message : "Unexpected error", 500, "internal");
+  if (!(e instanceof ProviderError)) console.error(e);
+  // Internal errors (database, Stripe) are logged, never shown to the browser as is.
+  const err = e instanceof ProviderError ? e : new ProviderError("Something went wrong on our side. Try again in a moment.", 500, "internal");
   return Response.json({ error: err.code, message: err.message }, { status: err.status });
 }

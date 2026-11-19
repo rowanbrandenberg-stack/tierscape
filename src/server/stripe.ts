@@ -61,9 +61,9 @@ function form(obj: Record<string, unknown>, prefix = "", out = new URLSearchPara
   return out;
 }
 
-export async function stripe<T>(method: "GET" | "POST", path: string, body?: Record<string, unknown>, idempotencyKey?: string): Promise<T> {
+export async function stripe<T>(method: "GET" | "POST" | "DELETE", path: string, body?: Record<string, unknown>, idempotencyKey?: string): Promise<T> {
   const { secret } = stripeConfig();
-  const r = await fetch(`https://api.stripe.com/v1/${path}${method === "GET" && body ? `?${form(body)}` : ""}`, {
+  const r = await fetch(`https://api.stripe.com/v1/${path}${method !== "POST" && body ? `?${form(body)}` : ""}`, {
     method,
     headers: {
       authorization: `Bearer ${secret}`,
@@ -95,9 +95,8 @@ export function createCheckout(o: { companyId: string; customerId: string; plan:
       client_reference_id: o.companyId,
       line_items: { 0: { price, quantity: 1 } },
       ...(o.founding && c.foundingCoupon ? { discounts: { 0: { coupon: c.foundingCoupon } } } : { allow_promotion_codes: "false" }),
-      automatic_tax: { enabled: "true" },
-      customer_update: { address: "auto", name: "auto" },
-      tax_id_collection: { enabled: "true" },
+      // Turn on with STRIPE_AUTOMATIC_TAX=1 once Stripe Tax has an origin address; Checkout then shows tax before payment.
+      ...(process.env.STRIPE_AUTOMATIC_TAX === "1" ? { automatic_tax: { enabled: "true" }, customer_update: { address: "auto", name: "auto" }, tax_id_collection: { enabled: "true" } } : {}),
       subscription_data: { metadata: { company_id: o.companyId, founding: o.founding ? "1" : "0" } },
       metadata: { company_id: o.companyId },
       expires_at: Math.floor(Date.now() / 1000) + 45 * 60,
@@ -110,3 +109,59 @@ export function createCheckout(o: { companyId: string; customerId: string; plan:
 
 export const createPortal = (customerId: string, origin: string) =>
   stripe<{ url: string }>("POST", "billing_portal/sessions", { customer: customerId, return_url: `${origin}/account` });
+
+/** One Stripe customer per company, created once and stored. */
+export function createCustomer(companyId: string, email: string | null, name: string) {
+  return stripe<{ id: string }>("POST", "customers", { email: email ?? undefined, name, metadata: { company_id: companyId } }, `customer:${companyId}`);
+}
+
+type StripeSub = { id: string; schedule: string | null; items: { data: { id: string; price: { id: string; unit_amount: number } }[] }; discounts?: unknown[] };
+
+export const getSubscription = (id: string) => stripe<StripeSub>("GET", `subscriptions/${id}`);
+
+/** What switching now would charge today, from Stripe's own proration. */
+export async function previewSwitch(customer: string, sub: StripeSub, price: string, dropDiscount: boolean) {
+  const inv = await stripe<{ amount_due: number; total_tax_amounts?: { amount: number }[]; total_taxes?: { amount: number }[] }>("POST", "invoices/create_preview", {
+    customer,
+    subscription: sub.id,
+    subscription_details: {
+      items: { 0: { id: sub.items.data[0].id, price } },
+      proration_behavior: "always_invoice",
+      ...(dropDiscount ? { discounts: "" } : {}),
+    },
+  });
+  return { dueNow: inv.amount_due / 100 };
+}
+
+/** Upgrades and monthly to annual: switch now, charge the prorated difference, and only apply if it is paid. */
+export async function switchNow(sub: StripeSub, price: string, dropDiscount: boolean, key: string) {
+  if (sub.schedule) await stripe("POST", `subscription_schedules/${sub.schedule}/release`, {});
+  const out = await stripe<{ id: string; pending_update: unknown | null }>(
+    "POST",
+    `subscriptions/${sub.id}`,
+    { items: { 0: { id: sub.items.data[0].id, price } }, proration_behavior: "always_invoice", payment_behavior: "pending_if_incomplete" },
+    key,
+  );
+  if (dropDiscount && !out.pending_update) await stripe("DELETE", `subscriptions/${sub.id}/discount`).catch(() => undefined);
+  return { pending: !!out.pending_update };
+}
+
+/** Downgrades and annual to monthly: keep the current plan until the period ends, then switch. */
+export async function switchAtPeriodEnd(sub: StripeSub, price: string, keepCoupon: string | null) {
+  const sched = sub.schedule
+    ? await stripe<{ id: string; phases: { start_date: number; end_date: number }[] }>("GET", `subscription_schedules/${sub.schedule}`)
+    : await stripe<{ id: string; phases: { start_date: number; end_date: number }[] }>("POST", "subscription_schedules", { from_subscription: sub.id });
+  const now = sched.phases[0];
+  await stripe("POST", `subscription_schedules/${sched.id}`, {
+    end_behavior: "release",
+    phases: {
+      0: { items: { 0: { price: sub.items.data[0].price.id } }, start_date: now.start_date, end_date: now.end_date, ...(keepCoupon ? { discounts: { 0: { coupon: keepCoupon } } } : {}) },
+      1: { items: { 0: { price } }, iterations: 1 },
+    },
+  });
+}
+
+export const setCancelAtPeriodEnd = async (sub: StripeSub, on: boolean) => {
+  if (sub.schedule) await stripe("POST", `subscription_schedules/${sub.schedule}/release`, {});
+  return stripe("POST", `subscriptions/${sub.id}`, { cancel_at_period_end: on ? "true" : "false" });
+};
