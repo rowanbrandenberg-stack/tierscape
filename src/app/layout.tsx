@@ -7,6 +7,7 @@ import "@fontsource/inter-tight/600.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "./globals.css";
 import { AppHeader } from "@/components/shell/AppHeader";
+import { ManualAiDialog } from "@/components/shell/ManualAiDialog";
 
 export const metadata: Metadata = {
   title: { default: "Tierscape", template: "%s · Tierscape" },
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AppHeader />
         {children}
+        <ManualAiDialog />
       </body>
     </html>
   );

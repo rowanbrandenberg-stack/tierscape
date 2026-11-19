@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { parseJsonReply } from "@/lib/prompts";
 import { ProviderError } from "./http";
 
 type Block = { type: "text"; text: string } | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
@@ -15,9 +16,8 @@ export async function claudeJson<T>(content: Block[], maxTokens = 1200): Promise
   if (!r.ok) throw new ProviderError(`Claude answered ${r.status}`, 502);
   const j = (await r.json()) as { content?: { type: string; text?: string }[] };
   const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
-  const raw = text.match(/```(?:json)?\s*([\s\S]*?)```/)?.[1] ?? text.slice(Math.min(...["{", "["].map((c) => (text.indexOf(c) < 0 ? Infinity : text.indexOf(c)))));
   try {
-    return JSON.parse(raw.trim().replace(/[^}\]]*$/, "")) as T;
+    return parseJsonReply<T>(text);
   } catch {
     throw new ProviderError("Claude's answer was not readable. Try again.", 502, "invalid_json");
   }

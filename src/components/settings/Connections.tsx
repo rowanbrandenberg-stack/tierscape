@@ -24,10 +24,10 @@ export function Connections() {
             const st = f?.[r.key];
             return (
               <li key={r.key}>
-                <span className="swatch" style={{ background: st?.ok ? "var(--ok)" : "var(--rule-strong)" }} />
+                <span className="swatch" style={{ background: st?.manual ? "#e0a400" : st?.ok ? "var(--ok)" : "var(--rule-strong)" }} />
                 <span style={{ minWidth: 0 }}>
                   <strong>{r.name}</strong>
-                  <span className="small muted" style={{ display: "block" }}>{!st ? "Checking" : st.ok ? r.on : st.why}</span>
+                  <span className="small muted" style={{ display: "block" }}>{!st ? "Checking" : st.manual ? `${st.why} ${r.on}` : st.ok ? r.on : st.why}</span>
                 </span>
               </li>
             );

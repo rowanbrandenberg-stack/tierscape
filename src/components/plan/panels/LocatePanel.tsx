@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, ApiError } from "@/client/api";
+import { ManualCancelled } from "@/client/manualAi";
 import { useEditor } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { useFeatures } from "@/client/useFeatures";
@@ -65,6 +66,7 @@ export function LocatePanel() {
       const r = await traceMarksFromPhoto(blob, photo.camera);
       setTraceMsg(r.added ? `Traced ${r.added} marked ${r.added === 1 ? "line" : "lines"}. Check them against the paint and drag points to fix. ${r.note}` : r.note || "No locator marks found in this photo.");
     } catch (e) {
+      if (e instanceof ManualCancelled) return;
       setTraceMsg(e instanceof ApiError ? e.message : "Could not trace this photo.");
     } finally {
       setTracing(false);

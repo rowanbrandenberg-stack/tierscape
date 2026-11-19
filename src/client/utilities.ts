@@ -4,6 +4,7 @@ import { round1 } from "@/lib/geometry";
 import { toPlan } from "@/lib/projection";
 import type { Camera, Job, LikelyUtility, Pt, UtilityLine } from "@/lib/types";
 import { api } from "./api";
+import { ManualCancelled } from "./manualAi";
 import { useEditor } from "./editor";
 import { planImage } from "./planImage";
 
@@ -47,7 +48,7 @@ export async function findLikelyUtilities(opts: { aerial: boolean }): Promise<{ 
           for (const c of r.clues) found.push({ id: uid("lk"), type: c.type, pts: [fromPct(job, [c.xPct, c.yPct])], label: c.label, source: "aerial" });
           for (const x of r.routes) found.push({ id: uid("lk"), type: x.type, pts: x.pts.map((p) => fromPct(job, p)), label: x.label || "Probable service route", source: "aerial" });
         })
-        .catch((e) => void errors.push(`Aerial: ${e instanceof Error ? e.message : "unavailable"}`)),
+        .catch((e) => void errors.push(e instanceof ManualCancelled ? "Aerial: skipped." : `Aerial: ${e instanceof Error ? e.message : "unavailable"}`)),
     );
   }
   await Promise.all(tasks);

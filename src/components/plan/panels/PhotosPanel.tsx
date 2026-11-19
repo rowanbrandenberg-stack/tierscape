@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, ApiError } from "@/client/api";
+import { ManualCancelled } from "@/client/manualAi";
 import { useEditor } from "@/client/editor";
 import { putPhoto, deletePhoto } from "@/client/photoStore";
 import { planImage } from "@/client/planImage";
@@ -60,6 +61,7 @@ export function PhotosPanel() {
         j.activePhotoId = p.id;
       });
     } catch (e) {
+      if (e instanceof ManualCancelled) return;
       setErrors((x) => ({ ...x, [p.id]: e instanceof ApiError ? e.message : "Could not place this photo. Mark the spot on the plan instead." }));
     } finally {
       setBusy(null);

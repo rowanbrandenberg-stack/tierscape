@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, ApiError } from "@/client/api";
+import { ManualCancelled } from "@/client/manualAi";
 import { useEditor } from "@/client/editor";
 import { useFeatures } from "@/client/useFeatures";
 import { useSettings } from "@/client/settingsStore";
@@ -33,6 +34,7 @@ export function TiersView({ onNext }: { onNext: () => void }) {
       const r = await api.render(blob, renderPrompt(job, pricing, t));
       setRenders((x) => ({ ...x, [t]: r.dataUrl }));
     } catch (e) {
+      if (e instanceof ManualCancelled) return;
       setError(e instanceof ApiError ? e.message : "The render failed. Try again.");
     } finally {
       setBusy(null);

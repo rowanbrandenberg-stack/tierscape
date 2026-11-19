@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, ApiError } from "@/client/api";
+import { ManualCancelled } from "@/client/manualAi";
 import { useEditor } from "@/client/editor";
 import { useFeatures } from "@/client/useFeatures";
 import { PLANT_KINDS, UTILITIES } from "@/lib/catalog";
@@ -38,6 +39,7 @@ export function PlantsPanel() {
       );
       setMsg(n ? `Sizes updated for ${location}.` : "No usable estimate came back. Try again.");
     } catch (e) {
+      if (e instanceof ManualCancelled) { setMsg(null); return; }
       setMsg(e instanceof ApiError ? e.message : "Could not get estimates.");
     } finally {
       setBusy(false);
