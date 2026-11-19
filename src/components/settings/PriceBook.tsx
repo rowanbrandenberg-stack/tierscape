@@ -40,6 +40,11 @@ export function PriceBook() {
             <NumberInput label="Target margin" value={Math.round(marginFromMarkup(pricing.markupPct) * 10) / 10} onChange={(n) => set((p) => void (p.markupPct = markupFromMargin(n)))} />
             <span className="small muted">Profit as a share of the price. That is a {Math.round(pricing.markupPct * 10) / 10}% markup on cost.</span>
           </div>
+          <div className="field">
+            <label className="label">Overhead, %</label>
+            <NumberInput label="Overhead" value={pricing.overheadPct ?? 0} onChange={(n) => set((p) => void (p.overheadPct = Math.max(0, n)))} />
+            <span className="small muted">Trucks, insurance, office and fuel, added to job costs before your margin.</span>
+          </div>
           <div className="field"><label className="label">Waste allowance, %</label><NumberInput label="Waste allowance" value={pricing.wastePct} onChange={(n) => set((p) => void (p.wastePct = n))} /></div>
           <div className="field"><label className="label">Crew size</label><NumberInput label="Crew size" step="1" value={pricing.crewSize} onChange={(n) => set((p) => void (p.crewSize = Math.max(1, Math.round(n))))} /></div>
         </div>

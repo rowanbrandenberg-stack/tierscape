@@ -5,19 +5,23 @@ import type { Area, AreaType, Job, TierKey } from "./types";
 
 export interface Line {
   name: string;
-  unit: Unit;
+  unit: Unit | string;
   qty: number;
   cost: number;
+  /** Labor lines are hours, not something to order. */
+  labor?: boolean;
 }
 
 export interface Group {
-  kind: AreaType | "plants";
+  kind: AreaType | "plants" | "extras";
   title: string;
   sqft: number;
   plantCount: number;
   lines: Line[];
   hours: number;
   steps: string[];
+  /** Extra costs the homeowner sees by name. */
+  customerItems?: string[];
 }
 
 export interface Quote {
@@ -26,6 +30,8 @@ export interface Quote {
   materials: number;
   hours: number;
   labor: number;
+  /** Overhead added to built up costs before margin. */
+  overhead: number;
   price: number;
   days: number;
 }
@@ -52,7 +58,7 @@ export function paverText(a: Area): string {
  * square foot (scaled for slower paver layouts). Everything else is
  * materials plus labor, marked up.
  */
-export function quote(job: Pick<Job, "areas" | "plants">, pricing: Pricing, tier: TierKey): Quote {
+export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pricing, tier: TierKey): Quote {
   const groups: Group[] = [];
   let materials = 0;
   let hours = 0;
@@ -184,10 +190,35 @@ export function quote(job: Pick<Job, "areas" | "plants">, pricing: Pricing, tier
     groups.push({ kind: "plants", title: `Plant installation: ${count} plants (${kinds.join(", ")})`, sqft: 0, plantCount: count, lines, hours: h, steps });
   }
 
+  const extras = (job.extras ?? []).filter((e) => e.tiers.includes(tier) && e.qty > 0);
+  if (extras.length) {
+    const lines: Line[] = [];
+    let h = 0;
+    let m = 0;
+    for (const e of extras) {
+      if (e.kind === "labor") {
+        lines.push({ name: e.description || "Additional labor", unit: "person hr", qty: e.qty, cost: e.qty * pricing.laborRate, labor: true });
+        h += e.qty;
+      } else {
+        const c = e.qty * Math.max(0, e.cost);
+        lines.push({ name: e.description || "Other cost", unit: e.unit || "each", qty: e.qty, cost: c });
+        m += c;
+      }
+    }
+    materials += m;
+    hours += h;
+    markedMaterials += m;
+    markedHours += h;
+    const shown = extras.filter((e) => e.showCustomer && e.description.trim()).map((e) => e.description.trim());
+    groups.push({ kind: "extras", title: shown.length ? `Also included: ${shown.join(", ")}` : "Site work and job costs", sqft: 0, plantCount: 0, lines, hours: h, steps: [], customerItems: shown });
+  }
+
   const labor = hours * pricing.laborRate;
-  const price = Math.round((fixedPrice + (markedMaterials + markedHours * pricing.laborRate) * (1 + pricing.markupPct / 100)) / 10) * 10;
+  const built = markedMaterials + markedHours * pricing.laborRate;
+  const overhead = built * ((pricing.overheadPct ?? 0) / 100);
+  const price = Math.round((fixedPrice + (built + overhead) * (1 + pricing.markupPct / 100)) / 10) * 10;
   const days = Math.max(0.5, Math.ceil((hours / (pricing.crewSize * 8)) * 2) / 2);
-  return { tier, groups, materials, hours, labor, price, days };
+  return { tier, groups, materials, hours, labor, overhead, price, days };
 }
 
 /** Installed price per sq ft of one service, worked out on a reference 400 sq ft square. */
@@ -209,3 +240,6 @@ export const markupFromMargin = (marginPct: number) => {
 };
 
 export const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
+
+/** The size column for a scope line. */
+export const groupSize = (g: Group) => (g.kind === "plants" ? `${g.plantCount} plants` : g.kind === "extras" ? "" : `${Math.round(g.sqft).toLocaleString("en-US")} sq ft`);

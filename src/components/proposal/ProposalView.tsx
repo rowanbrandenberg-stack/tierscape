@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useEditor } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { yardIllustration } from "@/lib/illustration";
-import { money, quote } from "@/lib/pricing";
+import { groupSize, money, quote } from "@/lib/pricing";
 import { TIERS } from "@/lib/types";
 import { ShareReview } from "./ShareReview";
 import s from "./ProposalView.module.css";
@@ -70,7 +70,7 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
             <thead><tr><th>Work</th><th className="r">Size</th></tr></thead>
             <tbody>
               {q.groups.map((g) => (
-                <tr key={g.title}><td>{g.title}</td><td className="r num">{g.kind === "plants" ? `${g.plantCount} plants` : `${Math.round(g.sqft).toLocaleString()} sq ft`}</td></tr>
+                <tr key={g.title}><td>{g.title}</td><td className="r num">{groupSize(g)}</td></tr>
               ))}
             </tbody>
           </table>

@@ -56,3 +56,43 @@ describe("margin and markup", () => {
     expect(markupFromMargin(30)).toBeCloseTo(42.86, 2);
   });
 });
+
+describe("other job costs", () => {
+  const cost = (o: Partial<import("./types").ExtraCost>) => ({ id: "x", description: "Dump fee", kind: "disposal" as const, qty: 2, unit: "load", cost: 85, tiers: ["basic", "standard", "premium"] as import("./types").TierKey[], showCustomer: true, ...o });
+
+  it("adds each cost to the tiers that include it, marked up like everything else", () => {
+    const pricing = defaultSettings().pricing;
+    const job = sampleJob();
+    const before = quote(job, pricing, "standard");
+    job.extras = [cost({}), cost({ id: "y", description: "Skid steer rental", kind: "equipment", qty: 1, unit: "day", cost: 300, tiers: ["premium"], showCustomer: false })];
+    const std = quote(job, pricing, "standard");
+    expect(std.materials - before.materials).toBeCloseTo(170, 5);
+    expect(std.price - before.price).toBeGreaterThanOrEqual(170 * 1.35 - 10);
+    const g = std.groups.find((x) => x.kind === "extras")!;
+    expect(g.title).toBe("Also included: Dump fee");
+    const prem = quote(job, pricing, "premium");
+    expect(prem.groups.find((x) => x.kind === "extras")!.lines.map((l) => l.name)).toEqual(["Dump fee", "Skid steer rental"]);
+    expect(prem.groups.find((x) => x.kind === "extras")!.customerItems).toEqual(["Dump fee"]);
+  });
+
+  it("treats extra labor as person hours at crew cost, never as something to order", () => {
+    const pricing = defaultSettings().pricing;
+    const job = sampleJob();
+    const before = quote(job, pricing, "basic");
+    job.extras = [cost({ kind: "labor", description: "Hand dig near gas line", qty: 6, unit: "person hr", cost: 0 })];
+    const q = quote(job, pricing, "basic");
+    expect(q.hours - before.hours).toBe(6);
+    expect(q.labor - before.labor).toBe(6 * pricing.laborRate);
+    expect(q.groups.find((x) => x.kind === "extras")!.lines[0].labor).toBe(true);
+  });
+
+  it("ignores costs with no price, and applies overhead before margin", () => {
+    const pricing = defaultSettings().pricing;
+    const job = sampleJob();
+    job.extras = [cost({ cost: 0 })];
+    expect(quote(job, pricing, "standard").price).toBe(quote(sampleJob(), pricing, "standard").price);
+    const withOverhead = quote(sampleJob(), { ...pricing, overheadPct: 10 }, "standard");
+    expect(withOverhead.overhead).toBeGreaterThan(0);
+    expect(withOverhead.price).toBeGreaterThan(quote(sampleJob(), pricing, "standard").price);
+  });
+});

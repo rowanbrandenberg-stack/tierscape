@@ -86,7 +86,7 @@ export function renderPrompt(job: Job, pricing: Pricing, tier: TierKey): string 
     if (hid.length) L.push(`Out of frame, so do not draw: ${hid.join(", ")}.`);
   }
   L.push("", `${TIERS.find((t) => t.key === tier)!.name} plan surfaces:`);
-  for (const g of q.groups) if (g.kind !== "plants") L.push(`• ${g.title}, ${Math.round(g.sqft)} sq ft`);
+  for (const g of q.groups) if (g.kind !== "plants" && g.kind !== "extras") L.push(`• ${g.title}, ${Math.round(g.sqft)} sq ft`);
   const placed = job.plants.filter((p) => p.spots.length);
   if (placed.length) {
     L.push("", cam ? "Plants, by where they land in this photo:" : "Plants, positioned from the plan (north is up):");

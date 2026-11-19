@@ -14,7 +14,7 @@ export function BuildPack() {
   const [copied, setCopied] = useState(false);
   const merged = new Map<string, { name: string; unit: string; qty: number; cost: number }>();
   q.groups.forEach((g) =>
-    g.lines.forEach((l) => {
+    g.lines.filter((l) => !l.labor).forEach((l) => {
       const e = merged.get(l.name) ?? { name: l.name, unit: l.unit, qty: 0, cost: 0 };
       e.qty += l.qty;
       e.cost += l.cost;
@@ -55,9 +55,10 @@ export function BuildPack() {
             <dt>Person hours</dt><dd className="num">{Math.round(q.hours)} hr</dd>
             <dt>On site with a {pricing.crewSize} person crew</dt><dd className="num">{q.days} {q.days === 1 ? "day" : "days"}</dd>
             <dt>Crew cost at {money(pricing.laborRate)}/person hr</dt><dd className="num">{money(q.labor)}</dd>
-            <dt>Materials cost</dt><dd className="num">{money(q.materials)}</dd>
+            <dt>Materials and job costs</dt><dd className="num">{money(q.materials)}</dd>
+            {q.overhead > 0 && <><dt>Overhead at {pricing.overheadPct}%</dt><dd className="num">{money(q.overhead)}</dd></>}
             <dt className={s.strong}>Price to homeowner</dt><dd className={`num ${s.strong}`}>{money(q.price)}</dd>
-            <dt>Gross profit</dt><dd className="num">{money(q.price - q.materials - q.labor)}{q.price > 0 && <span className="small muted"> · {Math.round(((q.price - q.materials - q.labor) / q.price) * 100)}% margin</span>}</dd>
+            <dt>{q.overhead > 0 ? "Profit after overhead" : "Gross profit"}</dt><dd className="num">{money(q.price - q.materials - q.labor - q.overhead)}{q.price > 0 && <span className="small muted"> · {Math.round(((q.price - q.materials - q.labor - q.overhead) / q.price) * 100)}% margin</span>}</dd>
           </dl>
         </section>
         <section className={`stack ${s.dig}`}>
@@ -66,7 +67,8 @@ export function BuildPack() {
         </section>
         {q.groups.map((g) => (
           <section key={g.title} className="stack">
-            <h3 className="label">{g.kind === "plants" ? `Plant installation · ${g.plantCount} plants` : `${g.kind} · ${Math.round(g.sqft)} sq ft`}</h3>
+            <h3 className="label">{g.kind === "plants" ? `Plant installation · ${g.plantCount} plants` : g.kind === "extras" ? "Other job costs" : `${g.kind} · ${Math.round(g.sqft)} sq ft`}</h3>
+            {g.kind === "extras" && <ul className={s.steps}>{g.lines.map((l) => <li key={l.name}>{l.name}: {+l.qty.toFixed(1)} {l.unit}</li>)}</ul>}
             <ol className={s.steps}>{g.steps.map((x) => <li key={x}>{x}</li>)}</ol>
           </section>
         ))}

@@ -6,6 +6,7 @@ import { LotPanel } from "../plan/panels/LotPanel";
 import { LocatePanel } from "../plan/panels/LocatePanel";
 import { AreasPanel } from "../plan/panels/AreasPanel";
 import { PlantsPanel } from "../plan/panels/PlantsPanel";
+import { CostsPanel } from "../plan/panels/CostsPanel";
 import { PhotosPanel } from "../plan/panels/PhotosPanel";
 import s from "./PlanView.module.css";
 
@@ -20,6 +21,7 @@ export function PlanView({ onNext }: { onNext: () => void }) {
       <aside className={s.inspector} aria-label="Plan details">
         <AreasPanel />
         <PlantsPanel />
+        <CostsPanel />
         <PhotosPanel />
         <LotPanel />
         <LocatePanel />

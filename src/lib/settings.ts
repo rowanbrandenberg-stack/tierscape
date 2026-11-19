@@ -34,6 +34,8 @@ export function profileProblems(p: Profile): string[] {
 export interface Pricing {
   laborRate: number;
   markupPct: number;
+  /** Added to built up job costs before margin: trucks, insurance, office, fuel. */
+  overheadPct: number;
   wastePct: number;
   crewSize: number;
   services: Service[];
@@ -64,6 +66,7 @@ export function defaultSettings(): Settings {
     pricing: {
       laborRate: 65,
       markupPct: 35,
+      overheadPct: 0,
       wastePct: 10,
       crewSize: 3,
       services: structuredClone(DEFAULT_SERVICES),

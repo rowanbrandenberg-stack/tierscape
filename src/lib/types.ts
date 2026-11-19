@@ -137,6 +137,26 @@ export interface LocateTicket {
 
 export type PaymentTerms = "split" | "bid";
 
+export type ExtraKind = "equipment" | "delivery" | "disposal" | "excavation" | "subcontract" | "labor" | "material" | "other";
+
+/**
+ * A job specific cost the area and plant services do not cover: machine
+ * rental, delivery, dump fees, haul trips, subcontractors, extra labor.
+ */
+export interface ExtraCost {
+  id: string;
+  description: string;
+  kind: ExtraKind;
+  qty: number;
+  unit: string;
+  /** Your cost per unit. Labor uses the crew cost per person hour instead. */
+  cost: number;
+  /** Which customer options include it. */
+  tiers: TierKey[];
+  /** Listed by name on the proposal. Off means priced in but not itemized. */
+  showCustomer: boolean;
+}
+
 export interface Job {
   id: string;
   name: string;
@@ -152,6 +172,8 @@ export interface Job {
   likely?: LikelyUtility[];
   /** Answers to the private lines checklist, which 811 does not mark. */
   privateLines?: Partial<Record<PrivateLineKey, PrivateLineAnswer>>;
+  /** Job specific costs. Older jobs may not have it. */
+  extras?: ExtraCost[];
   photos: SitePhoto[];
   activePhotoId: string | null;
   locate: LocateTicket;

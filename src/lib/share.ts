@@ -4,7 +4,7 @@ import type { Pricing, Profile } from "./settings";
 import { DEFAULT_WARRANTY } from "./settings";
 import { AREA_TYPES } from "./catalog";
 import { polygonArea } from "./geometry";
-import { quote } from "./pricing";
+import { groupSize, quote } from "./pricing";
 
 /**
  * What a homeowner sees: prices, scope and terms. Never costs, hours,
@@ -75,7 +75,7 @@ export function buildSharedProposal(job: Job, profile: Profile, pricing: Pricing
         name: t.name,
         price: q.price,
         days: q.days,
-        scope: q.groups.map((g) => ({ title: g.title, size: g.kind === "plants" ? `${g.plantCount} plants` : `${Math.round(g.sqft).toLocaleString("en-US")} sq ft` })),
+        scope: q.groups.map((g) => ({ title: g.title, size: groupSize(g) })),
         plants: job.plants
           .filter((p) => p.spots.length)
           .map((p) => ({

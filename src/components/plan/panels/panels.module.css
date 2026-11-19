@@ -147,3 +147,14 @@
   flex-direction: column;
   gap: 4px;
 }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.needs {
+  border-color: #c98a1a !important;
+  background: #fff8e6;
+}
