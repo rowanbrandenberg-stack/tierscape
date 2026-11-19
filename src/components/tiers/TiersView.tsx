@@ -9,6 +9,8 @@ import { renderPrompt } from "@/lib/camera";
 import { yardIllustration } from "@/lib/illustration";
 import { money, quote } from "@/lib/pricing";
 import { TIERS, type TierKey } from "@/lib/types";
+import type { RerollStart } from "@/lib/renderFeedback";
+import { Reroll } from "./Reroll";
 import s from "./TiersView.module.css";
 
 export function TiersView({ onNext }: { onNext: () => void }) {
@@ -18,6 +20,9 @@ export function TiersView({ onNext }: { onNext: () => void }) {
   const job = ed.job!;
   const [split, setSplit] = useState(50);
   const [renders, setRenders] = useState<Partial<Record<TierKey, string>>>({});
+  /** Corrections gathered from earlier rerolls of each tier. */
+  const [notes, setNotes] = useState<Partial<Record<TierKey, string[]>>>({});
+  const [rerolling, setRerolling] = useState<TierKey | null>(null);
   const [busy, setBusy] = useState<TierKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -25,14 +30,17 @@ export function TiersView({ onNext }: { onNext: () => void }) {
   const prompt = renderPrompt(job, pricing, job.tier);
   const canRender = !!features?.render.ok && !!photo?.dataUrl;
 
-  async function render(t: TierKey) {
+  async function render(t: TierKey, override?: { prompt: string; notes: string[]; start: RerollStart }) {
     if (!photo?.dataUrl) return;
     setBusy(t);
     setError(null);
+    setRerolling(null);
     try {
-      const blob = await (await fetch(photo.dataUrl)).blob();
-      const r = await api.render(blob, renderPrompt(job, pricing, t));
+      const source = override?.start === "render" && renders[t] ? renders[t]! : photo.dataUrl;
+      const blob = await (await fetch(source)).blob();
+      const r = await api.render(blob, override?.prompt ?? renderPrompt(job, pricing, t));
       setRenders((x) => ({ ...x, [t]: r.dataUrl }));
+      if (override) setNotes((x) => ({ ...x, [t]: override.notes }));
     } catch (e) {
       if (e instanceof ManualCancelled) return;
       setError(e instanceof ApiError ? e.message : "The render failed. Try again.");
@@ -89,13 +97,24 @@ export function TiersView({ onNext }: { onNext: () => void }) {
               </button>
               {canRender && (
                 <div className={s.foot}>
-                  <button className="btn sm quiet" onClick={() => render(t.key)} disabled={!!busy}>{busy === t.key ? "Rendering" : renders[t.key] ? "Render again" : "Render from photo"}</button>
+                  <button className="btn sm quiet" onClick={() => (renders[t.key] ? setRerolling(t.key) : render(t.key))} disabled={!!busy}>{busy === t.key ? "Rendering" : renders[t.key] ? "Fix and render again" : "Render from photo"}</button>
                 </div>
               )}
             </article>
           );
         })}
       </div>
+      {rerolling && renders[rerolling] && (
+        <Reroll
+          key={rerolling}
+          tierName={TIERS.find((t) => t.key === rerolling)!.name}
+          base={renderPrompt(job, pricing, rerolling)}
+          earlier={notes[rerolling] ?? []}
+          previous={renders[rerolling]!}
+          onCancel={() => setRerolling(null)}
+          onRender={(prompt, n, start) => render(rerolling, { prompt, notes: n, start })}
+        />
+      )}
       {error && <p className="warn" role="alert">{error}</p>}
 
       <details className={s.prompt}>

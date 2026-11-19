@@ -107,7 +107,7 @@ export const api = {
       const img = (await askManually({
         target: "chatgpt",
         title: "Render this tier",
-        prompt: `Edit the attached photo of this yard. Keep the house, fences, trees and everything else that is not listed below exactly as it is, from the same camera angle, photorealistic.\n\n${prompt}`,
+        prompt,
         files: [{ name: `tierscape-yard.${ext(photo)}`, blob: photo }],
         answer: "image",
       })) as Blob;

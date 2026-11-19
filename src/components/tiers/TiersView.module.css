@@ -201,3 +201,59 @@
   max-height: 360px;
   overflow: auto;
 }
+
+.reroll {
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: #fff;
+  padding: 18px;
+}
+
+.rerollTop {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.rerollTop > img {
+  width: 100%;
+  border-radius: var(--r);
+  display: block;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipBtn {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chipBtn[aria-pressed="true"] {
+  background: var(--ink, #0e0e0e);
+  border-color: var(--ink, #0e0e0e);
+  color: #fff;
+}
+
+.rerollPrompt {
+  width: 100%;
+  font: inherit;
+  font-size: 0.82rem;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .rerollTop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
