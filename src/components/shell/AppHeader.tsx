@@ -27,6 +27,8 @@ export function AppHeader() {
         </Link>
         <nav className={s.nav} aria-label="Main">
           <Link href="/" aria-current={on("/") ? "page" : undefined}>Jobs</Link>
+          <Link href="/pricing" aria-current={on("/pricing") ? "page" : undefined}>Pricing</Link>
+          <Link href="/account" aria-current={on("/account") ? "page" : undefined}>Account</Link>
           <Link href="/settings" aria-current={on("/settings") ? "page" : undefined}>Settings</Link>
         </nav>
       </div>

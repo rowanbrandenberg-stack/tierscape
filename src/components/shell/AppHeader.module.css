@@ -46,3 +46,20 @@
 .nav a[aria-current="page"] {
   color: var(--ink);
 }
+
+@media (max-width: 520px) {
+  .bar {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+  .brand span {
+    display: none;
+  }
+  .nav {
+    gap: 4px;
+  }
+  .nav a {
+    padding: 12px 7px;
+    color: var(--ink-2);
+  }
+}

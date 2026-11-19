@@ -1,0 +1,164 @@
+.page {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+.head {
+  padding: clamp(40px, 6vw, 80px) 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.title {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: var(--t-title);
+  margin: 0;
+}
+
+.banner {
+  margin: 4px 0 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #fff4d6;
+  color: #5c3d00;
+  max-width: 820px;
+}
+
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 32px;
+  padding: 36px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.h2 {
+  font: 600 18px/1.2 var(--sans);
+  margin: 0 0 8px;
+}
+
+.note {
+  color: var(--ink-2);
+  font-size: 14px;
+  margin: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.body > :global(.btn) {
+  align-self: flex-start;
+}
+
+.body > p {
+  margin: 0;
+  max-width: 68ch;
+  line-height: 1.5;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.facts div {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+}
+
+.facts dt {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.explain {
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: var(--well);
+}
+
+.explain h3 {
+  font: 600 15px/1 var(--sans);
+  margin: 0 0 10px;
+}
+
+.explain ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.45;
+}
+
+.brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 3px solid var(--brand);
+}
+
+.brand img,
+.mono {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r);
+  object-fit: contain;
+}
+
+.mono {
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.roles {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+
+.roles th,
+.roles td {
+  text-align: left;
+  padding: 11px 12px 11px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.roles td:first-child {
+  font-weight: 500;
+  white-space: nowrap;
+  padding-right: 20px;
+}
+
+@media (max-width: 800px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
