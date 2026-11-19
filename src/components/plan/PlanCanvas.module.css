@@ -61,8 +61,9 @@
 }
 
 .zbtn {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
+  touch-action: manipulation;
   border-radius: 999px;
   border: 0;
   background: rgba(14, 14, 14, 0.78);
@@ -84,7 +85,7 @@
 
 .scale {
   position: absolute;
-  right: 12px;
+  left: 12px;
   bottom: 12px;
   display: flex;
   align-items: flex-end;
@@ -145,4 +146,104 @@
 
 .detail.loaded {
   opacity: 1;
+}
+
+/* What you can do right now, as big buttons on the map. */
+.actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  margin: 0 auto;
+  width: fit-content;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(14, 14, 14, 0.82);
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+}
+
+.act {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.act:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.primary {
+  background: #fff;
+  color: var(--ink);
+}
+
+.actSeg {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px;
+}
+
+.actSeg button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font: 500 13px/1 var(--sans);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.actSeg button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--ink);
+}
+
+.hintBar {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  background: var(--ink);
+  color: #fff;
+  font: 500 14px/1.35 var(--sans);
+}
+
+/* Phones get a tall map, so tracing does not happen through a letterbox. */
+@media (max-width: 640px) {
+  .frame {
+    aspect-ratio: auto;
+    height: min(68vh, 560px);
+  }
+  .actions {
+    border-radius: 18px;
+    bottom: 10px;
+  }
+  .scale {
+    bottom: auto;
+    top: 46px;
+  }
+}
+
+/* Touch screens pinch to zoom, so the plus and minus buttons step aside. */
+@media (pointer: coarse) {
+  .zoomStep {
+    display: none;
+  }
 }

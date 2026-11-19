@@ -1,6 +1,6 @@
 "use client";
 import { create } from "zustand";
-import type { Job, Pt } from "@/lib/types";
+import type { AreaType, Job, Pt } from "@/lib/types";
 
 /**
  * The open job plus everything the plan canvas needs: tools, selection,
@@ -34,6 +34,8 @@ interface EditorState {
   snapDeg: number;
   view: View | null;
   colorAerial: boolean;
+  /** What a new outline, box or circle becomes. Picked before drawing. */
+  drawType: AreaType;
   /** A short status line for the property line panel. */
   lotNotice: string | null;
   load: (job: Job) => void;
@@ -64,6 +66,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   view: null,
   colorAerial: true,
   lotNotice: null,
+  drawType: "patio",
   load: (job) => set({ job, past: [], future: [], tool: "select", draft: [], selection: null, placingPlantId: null, view: { ...job.site.extent } }),
   commit: (fn) => {
     const { job, past } = get();

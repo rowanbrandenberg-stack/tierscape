@@ -1,5 +1,5 @@
 "use client";
-import { newArea, uid } from "@/lib/jobs";
+import { newArea, newPlant, uid } from "@/lib/jobs";
 import { round1 } from "@/lib/geometry";
 import type { Area, Pt } from "@/lib/types";
 import { toGeo, toPlan } from "@/lib/projection";
@@ -10,7 +10,7 @@ import { useEditor } from "./editor";
 
 const ed = () => useEditor.getState();
 
-export function addArea(pts: Pt[], type: Area["type"] = "patio") {
+export function addArea(pts: Pt[], type: Area["type"] = ed().drawType) {
   const a = newArea(type, pts.map(round1));
   ed().commit((j) => void j.areas.push(a));
   ed().set({ tool: "select", draft: [], selection: { kind: "area", id: a.id } });
@@ -101,4 +101,41 @@ export async function pickLotAt(q: Pt) {
   } catch (e) {
     ed().set({ draft: [], lotNotice: e instanceof ApiError ? e.message : "Could not look up that lot." });
   }
+}
+
+/** Drop the last point of the shape being drawn, or leave the tool if none are left. */
+export function undoPoint() {
+  const { draft } = ed();
+  if (draft.length) ed().set({ draft: draft.slice(0, -1) });
+}
+
+/** Leave whatever tool is active and go back to moving and selecting. */
+export function cancelTool() {
+  ed().set({ tool: "select", draft: [], placingPlantId: null });
+}
+
+/** Start drawing a new area of a type, with the chosen shape tool. */
+export function startArea(type: Area["type"], shape: "outline" | "rect" | "circle" = "outline") {
+  ed().set({ drawType: type, tool: shape, draft: [], selection: null, placingPlantId: null });
+}
+
+/** A new plant, straight into placing it on the plan. */
+export function startPlant() {
+  const p = newPlant();
+  ed().commit((j) => void j.plants.push(p));
+  ed().set({ placingPlantId: p.id, tool: "select", draft: [], selection: null });
+  return p.id;
+}
+
+export function duplicateSelection() {
+  if (copySelection()) paste();
+}
+
+export function setSelectedAreaType(type: Area["type"]) {
+  const { selection } = ed();
+  if (selection?.kind !== "area") return;
+  ed().commit((j) => {
+    const a = j.areas.find((x) => x.id === selection.id);
+    if (a) a.type = type;
+  });
 }

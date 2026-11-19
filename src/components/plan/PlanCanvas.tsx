@@ -3,12 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, type Tool } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { FOV } from "@/lib/camera";
-import { GENERIC_SIZE, UTILITIES } from "@/lib/catalog";
+import { AREA_TYPES, GENERIC_SIZE, UTILITIES } from "@/lib/catalog";
 import { areaSqft, centroid, circle, clipHalfPlane, dist, edgeOn, pointInPolygon, polygonArea, rectangle, round1, snapCorner, snapNext } from "@/lib/geometry";
-import { addArea, finishDraft, pickLotAt } from "@/client/actions";
+import { addArea, cancelTool, deleteSelection, duplicateSelection, finishDraft, pickLotAt, setSelectedAreaType, undoPoint } from "@/client/actions";
 import { serviceFor } from "@/lib/pricing";
 import { tilesForExtent } from "@/lib/projection";
-import type { Pt } from "@/lib/types";
+import type { AreaType, Pt } from "@/lib/types";
+import { planHint } from "./Toolbar";
 import { fillPattern } from "./patterns";
 import { SampleLot } from "./SampleLot";
 import s from "./PlanCanvas.module.css";
@@ -25,20 +26,39 @@ export function PlanCanvas() {
   const ed = useEditor();
   const pricing = useSettings((x) => x.pricing);
   const job = ed.job!;
-  const view = ed.view ?? job.site.extent;
+  const ext = job.site.extent;
   const svgRef = useRef<SVGSVGElement>(null);
-  const [pxWidth, setPxWidth] = useState(800);
+  const [px, setPx] = useState({ w: 800, h: 533 });
+  const pxWidth = px.w;
+  /** Screen height over width, so the plan fills a tall phone screen as well as a wide monitor. */
+  const ar = px.h / px.w;
   const [hover, setHover] = useState<Pt | null>(null);
   const drag = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d0: number; anchor: Pt; w0: number } | null>(null);
+  /** Touch screens get bigger handles and wider hit areas. */
+  const [touchy, setTouchy] = useState(false);
+  const hs = touchy ? 2.2 : 1;
 
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setPxWidth(e.contentRect.width || 800));
+    const ro = new ResizeObserver(([e]) => setPx({ w: e.contentRect.width || 800, h: e.contentRect.height || 533 }));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  /** The whole lot, framed to the screen's shape. */
+  const fit = useMemo(() => {
+    if (ar >= ext.h / ext.w) {
+      const h = ext.w * ar;
+      return { x: ext.x, y: ext.y + ext.h / 2 - h / 2, w: ext.w, h };
+    }
+    const w = ext.h / ar;
+    return { x: ext.x + ext.w / 2 - w / 2, y: ext.y, w, h: ext.h };
+  }, [ar, ext]);
+  const view = ed.view ? { ...ed.view, h: ed.view.w * ar } : fit;
 
   const setColor = (on: boolean) => {
     ed.set({ colorAerial: on });
@@ -104,8 +124,37 @@ export function PlanCanvas() {
   );
 
   /* ---------- pointer handling ---------- */
+  const clientToPlan = (cx: number, cy: number) => toPlan({ clientX: cx, clientY: cy });
+
+  function endDrag(keep: boolean) {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (d.moved && keep) {
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false), 0);
+    } else if (d.kind !== "pan" && !d.moved) {
+      // A press with no movement: drop the checkpoint we took for nothing.
+      useEditor.setState((st) => ({ past: st.past.slice(0, -1) }));
+    }
+  }
+
   function onPointerDown(e: React.PointerEvent) {
-    if (e.button !== 0) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    setTouchy(e.pointerType !== "mouse");
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+
+    // Two fingers: pinch to zoom and pan, whatever tool is active.
+    if (pointers.current.size === 2) {
+      endDrag(false);
+      const [a, b] = [...pointers.current.values()];
+      pinch.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, anchor: clientToPlan((a.x + b.x) / 2, (a.y + b.y) / 2), w0: view.w };
+      suppressClick.current = true;
+      return;
+    }
+    if (pointers.current.size > 2) return;
+
     const t = (e.target as Element).closest("[data-hit]") as HTMLElement | null;
     const hit = t?.dataset.hit;
     const q = toPlan(e);
@@ -123,28 +172,38 @@ export function PlanCanvas() {
         drag.current = { kind: "area", id, start: q, orig: job.areas.find((a) => a.id === id)!.pts.map((p) => [...p] as Pt), moved: false };
       }
       if (drag.current) {
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
         e.preventDefault();
         return;
       }
     }
-    if (editing && view.w < job.site.extent.w * 1.49) {
-      drag.current = { kind: "pan", sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false };
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    }
+    // Anything else might be a drag to move the map, in any tool. A tap stays a tap.
+    drag.current = { kind: "pan", sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false };
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pc = pinch.current;
+    if (pc && pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const w = Math.min(ext.w * 1.5, Math.max(12, (pc.w0 * pc.d0) / d));
+      const r = svgRef.current!.getBoundingClientRect();
+      const k = w / r.width;
+      const mx = (a.x + b.x) / 2 - r.left;
+      const my = (a.y + b.y) / 2 - r.top;
+      setView({ x: pc.anchor[0] - mx * k, y: pc.anchor[1] - my * k, w });
+      return;
+    }
     const q = toPlan(e);
     const d = drag.current;
     if (!d) {
-      if (tool !== "select" || placingPlantId) setHover(q);
+      if (e.pointerType === "mouse" && (tool !== "select" || placingPlantId)) setHover(q);
       return;
     }
     if (d.kind === "pan") {
       const dx = e.clientX - d.sx;
       const dy = e.clientY - d.sy;
-      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+      if (!d.moved && Math.abs(dx) + Math.abs(dy) < (e.pointerType === "mouse" ? 5 : 10)) return;
       d.moved = true;
       setView({ ...view, x: d.vx - dx * u, y: d.vy - dy * u });
       return;
@@ -168,23 +227,21 @@ export function PlanCanvas() {
     }
   }
 
-  function onPointerUp() {
-    const d = drag.current;
-    drag.current = null;
-    if (!d) return;
-    if (d.moved) {
-      suppressClick.current = true;
-      setTimeout(() => (suppressClick.current = false), 0);
-    } else if (d.kind !== "pan") {
-      // A press with no movement: drop the checkpoint we took for nothing.
-      useEditor.setState((st) => ({ past: st.past.slice(0, -1) }));
+  function onPointerUp(e: React.PointerEvent) {
+    pointers.current.delete(e.pointerId);
+    if (pinch.current) {
+      if (pointers.current.size < 2) pinch.current = null;
+      if (pointers.current.size === 0) setTimeout(() => (suppressClick.current = false), 350);
+      drag.current = null;
+      return;
     }
+    endDrag(true);
   }
 
   function onClick(e: React.MouseEvent) {
     if (suppressClick.current) return;
     const q = toPlan(e);
-    const near = (a: Pt | undefined) => !!a && dist(a, q) < 10 * u;
+    const near = (a: Pt | undefined) => !!a && dist(a, q) < 10 * u * hs;
     if (placingPlantId) {
       ed.commit((j) => void j.plants.find((p) => p.id === placingPlantId)?.spots.push(round1(q)));
       return;
@@ -238,34 +295,34 @@ export function PlanCanvas() {
   }
 
   /* ---------- zoom ---------- */
-  const ext = job.site.extent;
   const setView = useCallback(
     (v: { x: number; y: number; w: number; h?: number }) => {
-      const w = Math.min(ext.w * 1.5, Math.max(12, v.w));
-      const h = (w * ext.h) / ext.w;
+      const w = Math.min(Math.max(ext.w, fit.w) * 1.5, Math.max(12, v.w));
+      const h = w * ar;
       const pad = ext.w * 0.25;
-      const x = Math.min(ext.x + ext.w + pad - w, Math.max(ext.x - pad, v.x));
-      const y = Math.min(ext.y + ext.h + pad - h, Math.max(ext.y - pad, v.y));
+      const x = Math.min(Math.max(ext.x + ext.w + pad - w, fit.x), Math.max(Math.min(ext.x - pad, fit.x), v.x));
+      const y = Math.min(Math.max(ext.y + ext.h + pad - h, fit.y), Math.max(Math.min(ext.y - pad, fit.y), v.y));
       ed.set({ view: { x, y, w, h } });
     },
-    [ext, ed],
+    [ext, ed, fit, ar],
   );
   const zoomAt = useCallback(
     (f: number, c?: Pt) => {
       const [cx, cy] = c ?? [view.x + view.w / 2, view.y + view.h / 2];
-      const nw = Math.min(ext.w * 1.5, Math.max(12, view.w / f));
+      const nw = Math.min(Math.max(ext.w, fit.w) * 1.5, Math.max(12, view.w / f));
       const r = nw / view.w;
       setView({ x: cx - (cx - view.x) * r, y: cy - (cy - view.y) * r, w: nw });
     },
-    [view, ext, setView],
+    [view, ext, fit, setView],
   );
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
+    // The plan is a map: the wheel and a trackpad pinch zoom it, around the pointer.
     const wheel = (e: WheelEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, toPlan(e));
+      const step = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      zoomAt(Math.exp(-step * (e.ctrlKey ? 0.01 : 0.0025)), toPlan(e));
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
@@ -276,8 +333,8 @@ export function PlanCanvas() {
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.ctrlKey || e.metaKey) return;
       if (e.key === "+" || e.key === "=") zoomAt(1.4);
       else if (e.key === "-" || e.key === "_") zoomAt(1 / 1.4);
-      else if (e.key === "0") ed.set({ view: { ...ext } });
-      else if (e.key.startsWith("Arrow") && view.w < ext.w * 1.49) {
+      else if (e.key === "0") ed.set({ view: null });
+      else if (e.key.startsWith("Arrow")) {
         e.preventDefault();
         const d = view.w * 0.15;
         setView({ ...view, x: view.x + (e.key === "ArrowLeft" ? -d : e.key === "ArrowRight" ? d : 0), y: view.y + (e.key === "ArrowUp" ? -d : e.key === "ArrowDown" ? d : 0) });
@@ -285,7 +342,7 @@ export function PlanCanvas() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoomAt, view, ext, setView, ed]);
+  }, [zoomAt, view, setView, ed]);
 
   /* ---------- drawing ---------- */
   const label = (x: number, y: number, text: string, color = "#fff", size = 11) => (
@@ -304,13 +361,14 @@ export function PlanCanvas() {
       <svg
         ref={svgRef}
         className={s.svg}
-        data-mode={tool !== "select" || placingPlantId ? "draw" : view.w < ext.w * 1.49 ? "pan" : "select"}
+        data-mode={tool !== "select" || placingPlantId ? "draw" : "pan"}
         viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
         role="img"
         aria-label="Plan of the property"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         onPointerLeave={() => setHover(null)}
         onClick={onClick}
         onDoubleClick={() => MULTI.includes(tool) && finishDraft()}
@@ -366,7 +424,7 @@ export function PlanCanvas() {
         {job.lot && job.lot.length > 2 && (
           <g>
             <polygon points={job.lot.join(" ")} fill="none" stroke="#ffb020" strokeWidth={(selection?.kind === "lot" ? 3.5 : 2.5) * u} strokeDasharray={`${10 * u} ${4 * u} ${2 * u} ${4 * u}`} pointerEvents="none" />
-            {editing && <polygon points={job.lot.join(" ")} fill="none" stroke="transparent" strokeWidth={12 * u} data-hit="lot" style={{ cursor: "pointer", pointerEvents: "stroke" }} />}
+            {editing && <polygon points={job.lot.join(" ")} fill="none" stroke="transparent" strokeWidth={12 * u * hs} data-hit="lot" style={{ cursor: "pointer", pointerEvents: "stroke" }} />}
             {job.lot.map((p, i) => {
               const q = job.lot![(i + 1) % job.lot!.length];
               const L = dist(p, q);
@@ -385,7 +443,7 @@ export function PlanCanvas() {
             <g key={ut.id}>
               <polyline points={ut.pts.join(" ")} fill="none" stroke={U.color} strokeOpacity={0.28} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
               <polyline points={ut.pts.join(" ")} fill="none" stroke={U.color} strokeWidth={(on ? 4 : 3) * u} strokeDasharray={`${8 * u} ${4 * u}`} pointerEvents="none" />
-              {editing && <polyline points={ut.pts.join(" ")} fill="none" stroke="transparent" strokeWidth={12 * u} data-hit={`utility:${ut.id}`} style={{ cursor: "pointer", pointerEvents: "stroke" }} />}
+              {editing && <polyline points={ut.pts.join(" ")} fill="none" stroke="transparent" strokeWidth={12 * u * hs} data-hit={`utility:${ut.id}`} style={{ cursor: "pointer", pointerEvents: "stroke" }} />}
               {label(mid[0], mid[1] - 7 * u, U.short, U.color, 10.5)}
             </g>
           );
@@ -456,7 +514,7 @@ export function PlanCanvas() {
               <g key={`${p.id}${i}`}>
                 <circle cx={q[0]} cy={q[1]} r={Math.max(0.6, spread / 2)} fill="#2f8f4a" fillOpacity={0.55} stroke={on ? "#ff3d7f" : "#fff"} strokeWidth={(on ? 2.5 : 1.2) * u} strokeDasharray={p.estimate || on ? undefined : `${3 * u} ${3 * u}`} pointerEvents="none" />
                 <circle cx={q[0]} cy={q[1]} r={2 * u} fill="#fff" pointerEvents="none" />
-                {editing && <circle cx={q[0]} cy={q[1]} r={Math.max(spread / 2, 8 * u)} fill="transparent" data-hit={`plant:${p.id}:${i}`} className={s.movable} />}
+                {editing && <circle cx={q[0]} cy={q[1]} r={Math.max(spread / 2, 8 * u * hs)} fill="transparent" data-hit={`plant:${p.id}:${i}`} className={s.movable} />}
                 {i === 0 && p.name && label(q[0], q[1] + spread / 2 + 12 * u, p.name, "#fff", 10.5)}
               </g>
             );
@@ -471,7 +529,7 @@ export function PlanCanvas() {
             if (!pts || !selection) return null;
             const kind = selection.kind === "area" ? `corner-area:${selection.id}` : selection.kind === "lot" ? "corner-lot:" : `corner-utility:${(selection as { id: string }).id}`;
             const color = selection.kind === "lot" ? "#ffb020" : "#fff";
-            return pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={6 * u} fill={color} stroke="#ff3d7f" strokeWidth={2.2 * u} data-hit={`${kind}:${i}`} className={s.handle} />);
+            return pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={6 * u * hs} fill={color} stroke="#ff3d7f" strokeWidth={2.2 * u} data-hit={`${kind}:${i}`} className={s.handle} />);
           })()}
 
         {/* the shape being drawn and its live measurement */}
@@ -479,7 +537,7 @@ export function PlanCanvas() {
           <g pointerEvents="none">
             {draft.length > 1 && <polyline points={draft.join(" ")} fill="none" stroke={tool === "lot" ? "#ffb020" : tool === "utility" ? UTILITIES[ed.utilityType].color : "#ff3d7f"} strokeWidth={2.5 * u} />}
             {draft.map((q, i) => (
-              <circle key={i} cx={q[0]} cy={q[1]} r={(i === 0 ? 6 : 4) * u} fill={i === 0 ? "#fff" : "#ff3d7f"} stroke="#ff3d7f" strokeWidth={2 * u} />
+              <circle key={i} cx={q[0]} cy={q[1]} r={(i === 0 ? 6 * hs : 4) * u} fill={i === 0 ? "#fff" : "#ff3d7f"} stroke="#ff3d7f" strokeWidth={2 * u} />
             ))}
             {preview && (() => {
               const l = draft[draft.length - 1];
@@ -513,17 +571,62 @@ export function PlanCanvas() {
       <div className={s.overlay}>
         <span className={s.tag}>{job.sample ? "Sample lot" : job.site.imagery ? `${job.site.imagery.provider}` : "No imagery"}{ed.colorAerial ? "" : " · Gray means untouched"}</span>
         <div className={s.zoom}>
-          <button className={s.zbtn} onClick={() => zoomAt(1.4)} aria-label="Zoom in" disabled={view.w <= 12.5}>+</button>
-          <button className={s.zbtn} onClick={() => zoomAt(1 / 1.4)} aria-label="Zoom out">−</button>
-          <button className={`${s.zbtn} ${s.fit}`} onClick={() => ed.set({ view: { ...ext } })} aria-label="Fit the lot">Fit</button>
+          <button className={`${s.zbtn} ${s.zoomStep}`} onClick={() => zoomAt(1.4)} aria-label="Zoom in" disabled={view.w <= 12.5}>+</button>
+          <button className={`${s.zbtn} ${s.zoomStep}`} onClick={() => zoomAt(1 / 1.4)} aria-label="Zoom out">−</button>
+          <button className={`${s.zbtn} ${s.fit}`} onClick={() => ed.set({ view: null })} aria-label="Fit the lot">Fit</button>
           <button className={`${s.zbtn} ${s.fit}`} onClick={() => setColor(!ed.colorAerial)} aria-pressed={ed.colorAerial} aria-label={ed.colorAerial ? "Show the aerial in gray" : "Show the aerial in color"} title={ed.colorAerial ? "Gray" : "Color"}>
             {ed.colorAerial ? "Gray" : "Color"}
           </button>
         </div>
         <ScaleBar u={u} />
+        <ActionBar />
       </div>
     </div>
   );
+}
+
+/** Big on-map buttons for what you can do right now, so nothing needs a keyboard. */
+function ActionBar() {
+  const ed = useEditor();
+  const { tool, draft, selection, placingPlantId } = ed;
+  const n = draft.length;
+  const multi = tool === "outline" || tool === "lot" || tool === "utility";
+  const min = tool === "utility" ? 2 : 3;
+  let body: React.ReactNode = null;
+
+  if (placingPlantId) {
+    body = <button className={`${s.act} ${s.primary}`} onClick={cancelTool}>Done placing</button>;
+  } else if (tool !== "select") {
+    body = (
+      <>
+        {multi && n > 0 && <button className={s.act} onClick={undoPoint}>Undo point</button>}
+        <button className={s.act} onClick={cancelTool}>Cancel</button>
+        {multi && <button className={`${s.act} ${s.primary}`} onClick={finishDraft} disabled={n < min}>Finish</button>}
+      </>
+    );
+  } else if (selection) {
+    const area = selection.kind === "area" ? ed.job!.areas.find((a) => a.id === selection.id) : null;
+    body = (
+      <>
+        {area && (
+          <div className={s.actSeg} role="group" aria-label="Area type">
+            {(Object.keys(AREA_TYPES) as AreaType[]).map((k) => (
+              <button key={k} aria-pressed={area.type === k} onClick={() => setSelectedAreaType(k)}>{AREA_TYPES[k].label}</button>
+            ))}
+          </div>
+        )}
+        {(selection.kind === "area" || selection.kind === "plant") && <button className={s.act} onClick={duplicateSelection}>Duplicate</button>}
+        <button className={s.act} onClick={deleteSelection}>Delete</button>
+        <button className={`${s.act} ${s.primary}`} onClick={() => ed.set({ selection: null })}>Done</button>
+      </>
+    );
+  }
+  return body ? <div className={s.actions}>{body}</div> : null;
+}
+
+export function PlanHint() {
+  useEditor();
+  return <p className={s.hintBar} aria-live="polite">{planHint()}</p>;
 }
 
 function ScaleBar({ u }: { u: number }) {
