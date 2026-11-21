@@ -64,3 +64,36 @@
   gap: 14px;
   padding: 96px 0;
 }
+
+.save {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font: 400 13px/1.4 var(--sans);
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+.save strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.saveDetail {
+  display: block;
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rule-strong);
+  transform: translateY(-1px);
+}
+
+.save[data-tone="ok"] .dot { background: var(--ok); }
+.save[data-tone="busy"] .dot { background: var(--muted); }
+.save[data-tone="local"] .dot { background: #e0a400; }
+.save[data-tone="warn"] .dot { background: #b0451f; }

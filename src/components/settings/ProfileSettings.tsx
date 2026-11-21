@@ -25,7 +25,7 @@ export function ProfileSettings() {
   }
 
   return (
-    <section className={s.section} aria-labelledby="profile-h">
+    <section id="profile" className={s.section} aria-labelledby="profile-h">
       <div className={s.aside}>
         <h2 id="profile-h" className="head">Profile</h2>
         <p className="small muted">Your name, license, logo and colors go on every proposal.</p>

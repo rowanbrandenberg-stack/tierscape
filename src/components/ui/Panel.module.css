@@ -29,3 +29,39 @@
   color: var(--muted);
   font-size: var(--t-small);
 }
+
+.fold > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold:not([open]) {
+  gap: 0;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.summary::before {
+  content: "+";
+  font: 400 14px/1 var(--mono);
+  color: var(--muted);
+  width: 10px;
+}
+
+.fold[open] .summary::before {
+  content: "−";
+}
+
+.hint {
+  font-size: var(--t-small);
+  color: var(--muted);
+}

@@ -10,6 +10,8 @@ export async function GET() {
   const stripe = stripeReady();
   const f = accounts.ok ? await foundingAvailability(dbStore(), Date.now()).catch(() => null) : null;
   return Response.json({
+    /** Sign in and the no card trial work with accounts alone; paid checkout also needs Stripe. */
+    accounts: accounts.ok,
     checkout: accounts.ok && stripe.ok,
     why: !accounts.ok ? accounts.why : !stripe.ok ? stripe.why : null,
     founding: { limit: FOUNDING.limit, remaining: f?.remaining ?? null },

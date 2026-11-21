@@ -29,6 +29,8 @@ export function TiersView({ onNext }: { onNext: () => void }) {
   const photo = job.photos.find((p) => p.id === job.activePhotoId);
   const prompt = renderPrompt(job, pricing, job.tier);
   const canRender = !!features?.render.ok && !!photo?.dataUrl;
+  /** No image service is connected: the contractor runs the prompt in their own ChatGPT. */
+  const manual = !!features?.render.manual;
 
   async function render(t: TierKey, override?: { prompt: string; notes: string[]; start: RerollStart }) {
     if (!photo?.dataUrl) return;
@@ -69,8 +71,10 @@ export function TiersView({ onNext }: { onNext: () => void }) {
       </div>
       {!renders[job.tier] && (
         <p className="small muted">
-          {canRender
-            ? "These are sketches. Generate a render to see the homeowner's own photo finished."
+          {canRender && manual
+            ? "These are sketches. Photo renders are a manual test for now: TierScape writes the instructions, you run them in your own ChatGPT with the site photo and upload the image it makes. Renders stay on this screen and are not saved with the job."
+            : canRender
+            ? "These are sketches. Generate a render to see the homeowner's own photo finished. Renders stay on this screen and are not saved with the job."
             : photo?.dataUrl
               ? "These are sketches. Photo renders are not available on your plan yet."
               : "These are sketches. Add a site photo on the Plan tab to render the real yard."}
@@ -97,7 +101,7 @@ export function TiersView({ onNext }: { onNext: () => void }) {
               </button>
               {canRender && (
                 <div className={s.foot}>
-                  <button className="btn sm quiet" onClick={() => (renders[t.key] ? setRerolling(t.key) : render(t.key))} disabled={!!busy}>{busy === t.key ? "Rendering" : renders[t.key] ? "Fix and render again" : "Render from photo"}</button>
+                  <button className="btn sm quiet" onClick={() => (renders[t.key] ? setRerolling(t.key) : render(t.key))} disabled={!!busy}>{busy === t.key ? (manual ? "Waiting for your image" : "Rendering") : renders[t.key] ? "Fix and render again" : manual ? "Render in ChatGPT (manual test)" : "Render from photo"}</button>
                 </div>
               )}
             </article>

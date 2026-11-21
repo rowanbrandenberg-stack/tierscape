@@ -8,7 +8,7 @@ export function SitePanel() {
   const job = ed.job!;
   const site = job.site;
   return (
-    <Panel title="Site" id="site-h">
+    <Panel title="Site" id="site-h" collapsible defaultOpen={false} hint="Address, parcel, aerial">
       <dl className={s.facts}>
         <dt>Address</dt>
         <dd>{site.matchedAddress ?? site.address}</dd>

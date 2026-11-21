@@ -5,6 +5,7 @@ import { useSettings } from "@/client/settingsStore";
 import { yardIllustration } from "@/lib/illustration";
 import { groupSize, money, quote } from "@/lib/pricing";
 import { TIERS } from "@/lib/types";
+import { Readiness } from "./Readiness";
 import { ShareReview } from "./ShareReview";
 import s from "./ProposalView.module.css";
 
@@ -35,6 +36,11 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
         <button className="btn sm quiet" onClick={() => window.print()}>Print or save PDF</button>
         <button className="btn sm solid" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}>Share with homeowner</button>
       </div>
+      {!job.sample && !sharing && (
+        <div className="no-print">
+          <Readiness compact />
+        </div>
+      )}
       {sharing && <ShareReview onClose={() => setSharing(false)} />}
 
       <article className={s.doc} style={{ "--brand": profile.brandColor, "--accent": profile.accentColor } as React.CSSProperties}>

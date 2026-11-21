@@ -94,7 +94,7 @@ export function AccountCenter() {
               <dl className={s.facts}>
                 <div><dt>Current plan</dt><dd>None</dd></div>
                 <div><dt>Next charge</dt><dd>None scheduled</dd></div>
-                <div><dt>Trial</dt><dd>{TRIAL.days} days of Pro, no card, once per company. Sign in to start it.</dd></div>
+                <div><dt>Trial</dt><dd>{TRIAL.days} days of Pro, no card, once per company. {me?.accounts ? "Sign in to start it." : "Available once accounts open."}</dd></div>
               </dl>
               <div className="row">
                 <Link className="btn solid" href={me?.accounts ? "/signin?next=/account" : "/pricing"}>{me?.accounts ? "Sign in" : "See plans"}</Link>

@@ -1,12 +1,12 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
 import { useEditor } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { money, quote } from "@/lib/pricing";
-import { profileProblems } from "@/lib/settings";
+import { proposalReadiness, readyToShare } from "@/lib/readiness";
 import { buildSharedProposal, packProposal } from "@/lib/share";
 import { TIERS } from "@/lib/types";
+import { Readiness } from "./Readiness";
 import s from "./ProposalView.module.css";
 
 /**
@@ -17,12 +17,12 @@ import s from "./ProposalView.module.css";
 export function ShareReview({ onClose }: { onClose: () => void }) {
   const job = useEditor((x) => x.job!);
   const { profile, pricing, setProfile } = useSettings();
-  const problems = profileProblems(profile);
+  const settled = readyToShare(proposalReadiness(profile, pricing));
   const [checks, setChecks] = useState({ identity: false, warranty: false, prices: false });
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const ready = !problems.length && checks.identity && checks.warranty && checks.prices && !job.sample;
+  const ready = settled && checks.identity && checks.warranty && checks.prices && !job.sample;
   const tierName = TIERS.find((t) => t.key === job.tier)!.name;
   const address = job.site.matchedAddress ?? job.site.address;
 
@@ -61,13 +61,7 @@ export function ShareReview({ onClose }: { onClose: () => void }) {
       <p className="small muted">The homeowner sees your brand, the three options, scope, plants, terms and warranty. Never your costs, hours, margin or the build pack.</p>
 
       {job.sample && <p className="warn">The sample job cannot be shared. Start a job from a real address.</p>}
-      {problems.length > 0 && (
-        <div className={s.problems} role="alert">
-          <strong>Fix these in Settings first</strong>
-          <ul>{problems.map((p) => <li key={p}>{p}</li>)}</ul>
-          <Link className="btn sm" href="/settings">Open Settings</Link>
-        </div>
-      )}
+      {!job.sample && <Readiness compact />}
 
       <div className={s.review}>
         <div>

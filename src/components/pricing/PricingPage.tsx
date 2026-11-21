@@ -3,10 +3,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAccount } from "@/client/account";
 import { track } from "@/client/track";
-import { annualMonthly, annualSavings, FEATURES, FOUNDING, foundingSavings, PLAN_ORDER, PLANS, sellable, usd, type Cadence, type FeatureKey, type PlanKey } from "@/lib/billing/plans";
+import { annualMonthly, annualSavings, FEATURES, FOUNDING, foundingSavings, PLAN_ORDER, PLANS, sellable, TRIAL, usd, type Cadence, type FeatureKey, type PlanKey } from "@/lib/billing/plans";
 import s from "./Pricing.module.css";
 
-type Status = { checkout: boolean; why: string | null; founding: { limit: number; remaining: number | null } };
+type Status = { accounts?: boolean; checkout: boolean; why: string | null; founding: { limit: number; remaining: number | null } };
 
 const LEAKS = [
   { title: "Missed materials", example: "A forgotten $300 delivery charge comes straight out of the job's profit." },
@@ -52,6 +52,9 @@ export function PricingPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [buyErr, setBuyErr] = useState<string | null>(null);
   const hasPlan = !!me?.subscription && ["active", "past_due", "trialing"].includes(me.subscription.status);
+  // Accounts can be live before paid checkout is: then sign in and the no card trial work, and only purchase waits.
+  const accountsLive = !!(status?.accounts ?? me?.accounts);
+  const trialStarted = !!me?.company?.trialStartedAt;
 
   async function buy(plan: PlanKey, c: Cadence, founding = false) {
     track("plan_select", { plan: founding ? "founding" : plan, cadence: c });
@@ -138,12 +141,33 @@ export function PricingPage() {
                   </button>
                   <span className={s.ctaNote}>{me?.signedIn && !me.canManageBilling ? "Ask your company owner to choose a plan." : "Prices in USD. Tax shown at checkout."}</span>
                 </>
+              ) : !status ? (
+                <>
+                  <Link className={`${s.cta} ${featured ? s.ctaMain : ""}`} href="/">Try it with the sample job</Link>
+                  <span className={s.ctaNote}>Checking what is open…</span>
+                </>
+              ) : accountsLive ? (
+                <>
+                  <Link
+                    className={`${s.cta} ${featured ? s.ctaMain : ""}`}
+                    href={me?.signedIn ? "/account" : "/signin?next=/account"}
+                    onClick={() => track("plan_select", { plan: k, cadence })}
+                  >
+                    {trialStarted ? "See your trial" : me?.signedIn ? `Start the free ${TRIAL.days} day Pro trial` : `Sign in to start the free ${TRIAL.days} day trial`}
+                  </Link>
+                  <span className={s.ctaNote}>
+                    {trialStarted
+                      ? "Paid checkout is not open yet. Nothing is charged meanwhile."
+                      : `${TRIAL.days} days of Pro, no card. Paid checkout is not open yet, so nothing can be charged.`}{" "}
+                    <Link className="link" href="/">Or try the sample job.</Link>
+                  </span>
+                </>
               ) : (
                 <>
                   <Link className={`${s.cta} ${featured ? s.ctaMain : ""}`} href="/" onClick={() => track("plan_select", { plan: k, cadence })}>
                     Try it with the sample job
                   </Link>
-                  <span className={s.ctaNote}>Plans open for purchase once accounts are live.</span>
+                  <span className={s.ctaNote}>Accounts and paid plans are not open yet. Work is saved in this browser.</span>
                 </>
               )}
               <ul className={s.features}>

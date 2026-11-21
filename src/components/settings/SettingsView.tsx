@@ -3,6 +3,7 @@ import { useMounted } from "@/client/useMounted";
 import { ProfileSettings } from "./ProfileSettings";
 import { PriceBook } from "./PriceBook";
 import { Connections } from "./Connections";
+import { Readiness } from "../proposal/Readiness";
 import s from "./settings.module.css";
 
 export function SettingsView() {
@@ -15,6 +16,7 @@ export function SettingsView() {
       </header>
       {mounted && (
         <div className={s.sections}>
+          <Readiness />
           <ProfileSettings />
           <PriceBook />
           <Connections />

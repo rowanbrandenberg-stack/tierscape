@@ -14,6 +14,8 @@ export interface Profile {
   logo: string | null;
   /** The warranty the homeowner agrees to. Reviewed before any proposal is shared. */
   warranty: string;
+  /** Starting values the contractor looked at and kept on purpose, by readiness key, with the value they kept. */
+  reviewed?: Partial<Record<string, string>>;
 }
 
 export const DEFAULT_WARRANTY =
