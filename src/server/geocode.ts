@@ -183,6 +183,7 @@ async function attempt<T>(fn: () => Promise<T | null>, t: Tally): Promise<T | nu
 }
 
 export async function geocode(address: string): Promise<Geocoded> {
+  if (!/^\s*\d/.test(address)) throw new ProviderError("Add the house number to the start of the address (for example 4663 E Inwood Way).", 400, "bad_request");
   const t: Tally = { tries: 0, errors: [] };
   const norm = normalizeAddress(address);
 

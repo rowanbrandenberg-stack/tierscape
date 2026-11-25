@@ -23,6 +23,17 @@ export function tidySuggestion(text: string): string {
   return text.replace(/,\s*USA$/, "").replace(/,\s*([A-Z]{2}),\s*(\d{5}(-\d{4})?)$/, ", $1 $2");
 }
 
+/**
+ * When the typed text starts with a house number but a suggestion is only the
+ * street (common for newer or rural homes the geocoder lacks), keep the number
+ * so picking it does not silently drop it: "E Inwood Way, ..." to "4663 E Inwood Way, ...".
+ */
+export function keepHouseNumber(typed: string, suggestion: string): string {
+  const num = typed.trim().match(/^(\d+[A-Za-z]?)\s/)?.[1];
+  if (!num || /^\d/.test(suggestion)) return suggestion;
+  return `${num} ${suggestion}`;
+}
+
 export async function suggestAddresses(text: string, near?: { lat: number; lon: number }): Promise<string[]> {
   if (!suggestReady()) return [];
   const key = config.imagery.arcgisKey;
@@ -39,6 +50,6 @@ export async function suggestAddresses(text: string, near?: { lat: number; lon: 
   const seen = new Set<string>();
   return (r.suggestions ?? [])
     .filter((s) => !s.isCollection)
-    .map((s) => tidySuggestion(s.text))
+    .map((s) => keepHouseNumber(text, tidySuggestion(s.text)))
     .filter((s) => (seen.has(s) ? false : (seen.add(s), true)));
 }
