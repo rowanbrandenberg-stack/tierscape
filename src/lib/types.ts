@@ -157,8 +157,15 @@ export interface ExtraCost {
   showCustomer: boolean;
 }
 
+/** How a job started. Missing means an address job planned on the aerial. */
+export type JobKind = "plan" | "photo";
+
 export interface Job {
   id: string;
+  /** Older jobs have no kind and are address jobs. */
+  kind?: JobKind;
+  /** Photo-first jobs: the request, the photo and the three drafted options. */
+  concept?: import("./concept").PhotoConcept;
   name: string;
   createdAt: string;
   updatedAt: string;

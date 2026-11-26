@@ -23,5 +23,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Skip static files, imagery tiles and the Stripe webhook.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/imagery|api/billing/webhook|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/imagery|api/billing/webhook|api/payments/webhook|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
 };

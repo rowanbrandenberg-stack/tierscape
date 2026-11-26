@@ -181,3 +181,43 @@
 .exampleTiers strong {
   font-size: 1.15rem;
 }
+
+/* Photo first start */
+.drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--surface);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: center;
+}
+.drop:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.drop img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+}
+.drop > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px;
+}
+.startSwitch {
+  margin-top: 16px;
+}

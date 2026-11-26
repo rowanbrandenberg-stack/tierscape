@@ -3,9 +3,12 @@ import { useState } from "react";
 import { useEditor } from "@/client/editor";
 import { useSettings } from "@/client/settingsStore";
 import { yardIllustration } from "@/lib/illustration";
-import { groupSize, money, quote } from "@/lib/pricing";
-import { TIERS } from "@/lib/types";
+import { money } from "@/lib/pricing";
+import { isPhotoJob, jobOptions, splitAmounts } from "@/lib/proposal";
+import { depositPctOf } from "@/lib/settings";
+import { proposalApi } from "@/client/proposalApi";
 import { ShareReview } from "./ShareReview";
+import { PublishPanel } from "./PublishPanel";
 import s from "./ProposalView.module.css";
 
 const today = () => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -14,9 +17,13 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
   const ed = useEditor();
   const { profile, pricing } = useSettings();
   const job = ed.job!;
-  const q = quote(job, pricing, job.tier);
-  const tierName = TIERS.find((t) => t.key === job.tier)!.name;
-  const half = Math.round(q.price / 2);
+  const photoJob = isPhotoJob(job);
+  const opts = jobOptions(job, pricing);
+  const q = opts.find((o) => o.tier === job.tier) ?? opts[0];
+  const tierName = q ? (photoJob ? `${q.label}: ${q.name}` : q.name) : "";
+  const depositPct = job.terms === "bid" ? 0 : depositPctOf(pricing);
+  const half = Math.round(splitAmounts(Math.round((q?.price ?? 0) * 100), depositPct).depositCents / 100);
+  const conceptPhoto = photoJob && job.concept!.photoId ? proposalApi.assetUrl(job.id, job.concept!.photoId) : null;
   const [name, setName] = useState("");
   const [err, setErr] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -29,13 +36,14 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
       <div className={`${s.controls} no-print`}>
         <span className="label">Payment terms</span>
         <div className="seg" role="group" aria-label="Payment terms">
-          <button aria-pressed={job.terms === "split"} onClick={() => ed.commit((j) => void (j.terms = "split"))}>50% deposit, 50% on completion</button>
+          <button aria-pressed={job.terms === "split"} onClick={() => ed.commit((j) => void (j.terms = "split"))}>{depositPctOf(pricing)}% deposit, balance on completion</button>
           <button aria-pressed={job.terms === "bid"} onClick={() => ed.commit((j) => void (j.terms = "bid"))}>Fixed bid, paid on completion</button>
         </div>
         <button className="btn sm quiet" onClick={() => window.print()}>Print or save PDF</button>
-        <button className="btn sm solid" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}>Share with homeowner</button>
+        {!photoJob && <button className="btn sm quiet" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}>Offline link</button>}
       </div>
-      {sharing && <ShareReview onClose={() => setSharing(false)} />}
+      <PublishPanel />
+      {sharing && !photoJob && <ShareReview onClose={() => setSharing(false)} />}
 
       <article className={s.doc} style={{ "--brand": profile.brandColor, "--accent": profile.accentColor } as React.CSSProperties}>
         <header className={s.letterhead}>
@@ -56,11 +64,11 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
         <section className={s.cover}>
           <div>
             <div className="label">Prepared for</div>
-            <h2 className={s.address}>{job.site.matchedAddress ?? job.site.address}</h2>
+            <h2 className={s.address}>{job.site.matchedAddress ?? (job.site.address || job.name)}</h2>
             <span className={s.plan}>{tierName} plan</span>
           </div>
           <div className={s.picture}>
-            {photo?.dataUrl ? <img src={photo.dataUrl} alt="The yard today" /> : <span dangerouslySetInnerHTML={{ __html: yardIllustration(job, pricing, job.tier) }} />}
+            {conceptPhoto ? <img src={conceptPhoto} alt="The yard today" /> : photo?.dataUrl ? <img src={photo.dataUrl} alt="The yard today" /> : <span dangerouslySetInnerHTML={{ __html: yardIllustration(job, pricing, job.tier) }} />}
           </div>
         </section>
 
@@ -69,12 +77,40 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
           <table className="table">
             <thead><tr><th>Work</th><th className="r">Size</th></tr></thead>
             <tbody>
-              {q.groups.map((g) => (
-                <tr key={g.title}><td>{g.title}</td><td className="r num">{groupSize(g)}</td></tr>
+              {q?.scope.map((g) => (
+                <tr key={g.title}><td>{g.title}</td><td className="r num">{g.size}</td></tr>
               ))}
             </tbody>
           </table>
+          {photoJob && q && (
+            <div className="stack" style={{ "--gap": "6px", marginTop: 12 } as React.CSSProperties}>
+              {q.summary && <p>{q.summary}</p>}
+              {q.includes.length > 0 && <><span className="label">Includes</span><ul>{q.includes.map((x) => <li key={x}>{x}</li>)}</ul></>}
+              {q.excludes.length > 0 && <><span className="label">Not included</span><ul>{q.excludes.map((x) => <li key={x}>{x}</li>)}</ul></>}
+              {q.limitations.length > 0 && <><span className="label">Limitations</span><ul>{q.limitations.map((x) => <li key={x}>{x}</li>)}</ul></>}
+              {q.prepNote && <p className="small muted">{q.prepNote}</p>}
+              {q.preliminary.length > 0 && <p className="small">Preliminary price, based on a photo. Confirmed after the area is measured on site.</p>}
+            </div>
+          )}
         </section>
+
+        {photoJob && (
+          <section className={s.section}>
+            <h3 className="label">All three options</h3>
+            <div className={s.optionDoc}>
+              {opts.map((o) => {
+                const r = job.concept!.options.find((x) => x.tier === o.tier)?.render;
+                return (
+                  <figure key={o.tier}>
+                    {r && <img src={proposalApi.assetUrl(job.id, r.assetId)} alt={`Concept image, ${o.label}`} />}
+                    {r && <span className={s.concept}>Concept image, not an exact result</span>}
+                    <figcaption><strong>{o.label}: {o.name}</strong> <span className="num">{money(o.price)}</span></figcaption>
+                  </figure>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {placed.length > 0 && (
           <section className={s.section}>
@@ -100,12 +136,12 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
         <section className={s.total}>
           <div>
             <div className="label">{job.terms === "bid" ? "Fixed bid" : "Project total"}</div>
-            <div className={s.price}>{money(q.price)}</div>
-            <p className="small muted">Includes materials, labor and cleanup. About {q.days} {q.days === 1 ? "day" : "days"} on site. Good for 30 days.</p>
+            <div className={s.price}>{money(q?.price ?? 0)}</div>
+            <p className="small muted">Includes materials, labor and cleanup. About {q?.days} {q?.days === 1 ? "day" : "days"} on site. Good for 30 days.</p>
           </div>
           <div className={s.pay}>
             <div><span className="label">{job.terms === "split" ? "Deposit at signing" : "Due at signing"}</span><span className="num">{job.terms === "split" ? money(half) : "$0"}</span></div>
-            <div><span className="label">Due at completion</span><span className="num">{job.terms === "split" ? money(q.price - half) : money(q.price)}</span></div>
+            <div><span className="label">Due at completion</span><span className="num">{job.terms === "split" ? money((q?.price ?? 0) - half) : money(q?.price ?? 0)}</span></div>
           </div>
         </section>
 
@@ -116,7 +152,7 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
             <li>Changes to the scope are priced in writing before the work is done.</li>
             <li>{profile.warranty || "Plants are guaranteed for one growing season when watered as instructed. Damage from weather, animals or neglect is not covered."}</li>
             <li>{job.terms === "split" ? "The deposit secures your place on the schedule and orders materials. The balance is due when the work is complete." : "Payment is due in full when the work is complete."}</li>
-            <li>Property lines come from public parcel maps and are approximate. Work along a boundary needs the corners confirmed first.</li>
+            {!photoJob && <li>Property lines come from public parcel maps and are approximate. Work along a boundary needs the corners confirmed first.</li>}
           </ol>
         </section>
 
