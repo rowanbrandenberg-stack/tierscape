@@ -17,6 +17,8 @@ export interface Profile {
   warranty: string;
   /** How you work: base depths you insist on, what you will not do, how you price. Guides drafted proposals. */
   experience?: string;
+  /** Starting values the contractor looked at and kept on purpose, by readiness key, with the value they kept. */
+  reviewed?: Partial<Record<string, string>>;
 }
 
 export const DEFAULT_WARRANTY =

@@ -5,6 +5,7 @@ import { estimate, type EstimateResult } from "./estimate";
 import { groupSize, quote, type Quote } from "./pricing";
 import { DEFAULT_WARRANTY, depositPctOf, profileProblems, type Pricing, type Profile } from "./settings";
 import { TIERS, type Job, type TierKey } from "./types";
+import { proposalReadiness, readinessOpen } from "./readiness";
 
 /**
  * Both ways into a job, from an address and plan or from a photo, end here:
@@ -287,6 +288,11 @@ export interface Readiness {
 
 export function publishReadiness(job: Job, profile: Profile, pricing: Pricing): Readiness {
   const blockers = [...profileProblems(profile)];
+  // Placeholders replaced, and starting values (crew cost, overhead, license claim, warranty) kept on purpose.
+  for (const r of readinessOpen(proposalReadiness(profile, pricing))) {
+    const line = r.state === "fix" ? `${r.label}: ${r.detail}` : `${r.label}: check it in Settings and keep it on purpose. ${r.detail}`;
+    if (!blockers.some((b) => b.toLowerCase().includes(r.label.toLowerCase().split(" ")[0]))) blockers.push(line);
+  }
   const warnings: string[] = [];
   if (job.sample) blockers.push("The sample job cannot be shared.");
   const opts = jobOptions(job, pricing);

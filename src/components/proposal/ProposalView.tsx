@@ -7,6 +7,7 @@ import { money } from "@/lib/pricing";
 import { isPhotoJob, jobOptions, splitAmounts } from "@/lib/proposal";
 import { depositPctOf } from "@/lib/settings";
 import { proposalApi } from "@/client/proposalApi";
+import { Readiness } from "./Readiness";
 import { ShareReview } from "./ShareReview";
 import { PublishPanel } from "./PublishPanel";
 import s from "./ProposalView.module.css";
@@ -43,6 +44,11 @@ export function ProposalView({ onBuild }: { onBuild: () => void }) {
         {!photoJob && <button className="btn sm quiet" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}>Offline link</button>}
       </div>
       <PublishPanel />
+      {!job.sample && !sharing && (
+        <div className="no-print">
+          <Readiness compact />
+        </div>
+      )}
       {sharing && !photoJob && <ShareReview onClose={() => setSharing(false)} />}
 
       <article className={s.doc} style={{ "--brand": profile.brandColor, "--accent": profile.accentColor } as React.CSSProperties}>

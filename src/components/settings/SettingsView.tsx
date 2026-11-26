@@ -5,6 +5,7 @@ import { PriceBook } from "./PriceBook";
 import { Connections } from "./Connections";
 import { EstimatingRules } from "./EstimatingRules";
 import { PaymentsSettings } from "./PaymentsSettings";
+import { Readiness } from "../proposal/Readiness";
 import s from "./settings.module.css";
 
 export function SettingsView() {
@@ -17,6 +18,7 @@ export function SettingsView() {
       </header>
       {mounted && (
         <div className={s.sections}>
+          <Readiness />
           <ProfileSettings />
           <PriceBook />
           <EstimatingRules />

@@ -1,0 +1,81 @@
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: var(--r);
+  background: #fff4d6;
+  color: #5c3d00;
+}
+
+.box p {
+  margin: 4px 0 0;
+}
+
+.title {
+  margin: 0;
+  font: 600 15px/1.3 var(--sans);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(92, 61, 0, 0.18);
+}
+
+.mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font: 600 12px/1 var(--sans);
+  background: #5c3d00;
+  color: #fff4d6;
+}
+
+.list li[data-state="review"] .mark {
+  background: transparent;
+  color: #5c3d00;
+  border: 1px solid #5c3d00;
+}
+
+.text {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.text span {
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.done {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ok);
+}

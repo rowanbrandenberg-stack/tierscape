@@ -108,6 +108,7 @@ export function BillingPanel({ me }: { me: Me }) {
       </dl>
 
       {!manage && <p className={s.note}>Only the owner or a billing admin can change billing.</p>}
+      {!live && !me.checkout && <p className={s.note}>Paid checkout is not open yet, so nothing can be charged.{me.company?.trialStartedAt ? "" : " The free trial works now."}</p>}
       {manage && (
         <div className="row">
           {!live && !me.company?.trialStartedAt && (
@@ -115,7 +116,8 @@ export function BillingPanel({ me }: { me: Me }) {
               {busy === "trial" ? "Starting" : `Start ${TRIAL.days} day Pro trial`}
             </button>
           )}
-          {!live && <Link className={`btn ${me.company?.trialStartedAt ? "solid" : ""}`} href="/pricing">Choose a plan</Link>}
+          {!live && me.checkout && <Link className={`btn ${me.company?.trialStartedAt ? "solid" : ""}`} href="/pricing">Choose a plan</Link>}
+          {!live && !me.checkout && <Link className="btn quiet" href="/pricing">See plans</Link>}
           {live && <button className="btn solid" onClick={() => { setChanging((v) => !v); setTarget(null); setPreview(null); }}>Change plan</button>}
           {me.company && (sub || me.checkout) && (
             <button className="btn" disabled={!!busy} onClick={() => run("portal", async () => { const r = await post<{ url: string }>("/api/billing/portal"); window.location.href = r.url; })}>

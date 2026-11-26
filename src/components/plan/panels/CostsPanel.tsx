@@ -53,7 +53,7 @@ export function CostsPanel() {
   const unpriced = extras.filter((e) => e.kind !== "labor" && e.qty > 0 && !(e.cost > 0));
 
   return (
-    <Panel title="Other job costs" id="costs-h" aside={extras.length ? <span className="num small">{extras.length}</span> : undefined}>
+    <Panel title="Other job costs" id="costs-h" collapsible defaultOpen={extras.length > 0} hint={extras.length ? undefined : "Rentals, delivery, dump fees"} aside={extras.length ? <span className="num small">{extras.length}</span> : undefined}>
       {extras.length === 0 ? (
         <Empty>Rentals, delivery, dump fees, haul trips, subcontractors and extra labor go here, so they end up in the price.</Empty>
       ) : (

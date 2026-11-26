@@ -65,7 +65,7 @@ export function ManualAiDialog() {
           <h2 id="manual-h" className="head">{req.title}</h2>
           <button className="link" onClick={cancel}>Cancel</button>
         </div>
-        <p className="small muted">Testing mode: this runs in your own {app.name} instead of Tierscape&apos;s. Three steps.</p>
+        <p className="small muted">Manual test: TierScape is not connected to an AI service, so this step runs in your own {app.name} account. Three steps.</p>
 
         <ol className={s.steps}>
           {req.files.length > 0 && (

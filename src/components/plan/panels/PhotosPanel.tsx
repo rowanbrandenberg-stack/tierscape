@@ -69,17 +69,18 @@ export function PhotosPanel() {
   }
 
   return (
-    <Panel title="Site photos" id="photos-h">
+    <Panel title="Site photos" id="photos-h" collapsible defaultOpen={job.photos.some((p) => p.placedBy !== "sample")} hint={job.photos.length ? String(job.photos.length) : "Optional"}>
       <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
         {job.photos.map((p) => (
           <div key={p.id} className={s.photo} data-active={p.id === job.activePhotoId}>
             <button className={s.thumb} onClick={() => ed.commit((j) => void (j.activePhotoId = p.id))} aria-label={`Use ${p.name}`}>
-              {p.dataUrl ? <img src={p.dataUrl} alt="" /> : <SampleThumb />}
+              {p.dataUrl ? <img src={p.dataUrl} alt="" /> : p.placedBy === "sample" ? <SampleThumb /> : <span className={s.noPhoto}>Not on this device</span>}
             </button>
             <div className="stack" style={{ "--gap": "8px", minWidth: 0, flex: 1 } as React.CSSProperties}>
               <p className="small">{p.camera ? cameraSummary(job, p.camera) : "Not placed on the plan yet."}</p>
               {p.placedBy === "claude" && p.note && <p className="small muted">Matched by Claude: {p.note}</p>}
               {p.placedBy === "sample" && <p className="small muted">Sample photo.</p>}
+              {!p.dataUrl && p.placedBy !== "sample" && <p className="small muted">The image is stored only on the device it was added from. Its spot on the plan is saved with the job.</p>}
               {errors[p.id] && <p className="warn">{errors[p.id]}</p>}
               <div className="row" style={{ "--gap": "6px" } as React.CSSProperties}>
                 {p.dataUrl && features?.claude.ok && (
@@ -99,7 +100,12 @@ export function PhotosPanel() {
           <label className="btn sm" htmlFor="photo-in">Add a photo</label>
           <input id="photo-in" type="file" accept="image/*" hidden onChange={add} />
         </div>
-        <p className="small muted">The selected photo is what the tier renders are made from. Its spot and direction tell the image model where each planned area lands in the frame.</p>
+        <p className="small muted">
+          {job.sample
+            ? "Sample photo. Photos you add to a real job are kept in this browser."
+            : "Photos are kept in this browser only and are never uploaded to your account. Where each was taken, its direction and notes are saved with the job."}
+        </p>
+        <p className="small muted">The selected photo is what tier renders start from. Its spot and direction say where each planned area lands in the frame.</p>
       </div>
     </Panel>
   );

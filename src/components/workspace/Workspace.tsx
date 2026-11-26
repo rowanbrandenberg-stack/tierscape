@@ -6,7 +6,9 @@ import { useEditor } from "@/client/editor";
 import { useJobs } from "@/client/jobsStore";
 import { getPhoto } from "@/client/photoStore";
 import { useMounted } from "@/client/useMounted";
+import { useAccount } from "@/client/account";
 import { PlanView } from "./PlanView";
+import { SaveStatus } from "./SaveStatus";
 import { TiersView } from "../tiers/TiersView";
 import { ProposalView } from "../proposal/ProposalView";
 import { BuildPack } from "../build/BuildPack";
@@ -31,6 +33,9 @@ export function Workspace({ id }: { id: string }) {
   const mounted = useMounted();
   const stored = useJobs((x) => x.jobs[id]);
   const save = useJobs((x) => x.save);
+  const cloud = useAccount((x) => x.cloud);
+  // Signed in but the first cloud load has not started yet counts as loading, unless setup already failed.
+  const cloudPending = useAccount((x) => !x.checked || x.cloud === "loading" || (!!x.me?.signedIn && x.cloud === "off" && !x.syncNote));
   const ed = useEditor();
   const job = ed.job;
   const [tab, setTab] = useState<Tab>(stored?.kind === "photo" ? "options" : "plan");
@@ -56,9 +61,16 @@ export function Workspace({ id }: { id: string }) {
   }, [mounted, stored, id, ed]);
 
   // Save shortly after each change.
+  const [localSaved, setLocalSaved] = useState(true);
+  const firstSave = useRef(true);
   useEffect(() => {
     if (!job || job.id !== id) return;
-    const t = setTimeout(() => save(job), 400);
+    if (firstSave.current) firstSave.current = false;
+    else setLocalSaved(false);
+    const t = setTimeout(() => {
+      save(job);
+      setLocalSaved(true);
+    }, 400);
     return () => clearTimeout(t);
   }, [job, id, save]);
 
@@ -105,11 +117,23 @@ export function Workspace({ id }: { id: string }) {
 
   if (!mounted) return null;
   if (!stored) {
+    if (cloudPending)
+      return (
+        <main className="page">
+          <div className={s.missing}>
+            <p className="muted" role="status">Loading your jobs from your account…</p>
+          </div>
+        </main>
+      );
     return (
       <main className="page">
         <div className={s.missing}>
-          <h1 className="title">This job is not on this device.</h1>
-          <p className="muted">Jobs are saved in this browser for now.</p>
+          <h1 className="title">{cloud === "ready" ? "This job is not in your account or this browser." : "This job is not on this device."}</h1>
+          <p className="muted">
+            {cloud === "ready"
+              ? "It may have been deleted, or saved in another browser before you signed in there."
+              : "You are not signed in, so only jobs saved in this browser are available here."}
+          </p>
           <Link className="btn" href="/">Back to jobs <span aria-hidden="true">→</span></Link>
         </div>
       </main>
@@ -125,6 +149,7 @@ export function Workspace({ id }: { id: string }) {
         <div className={s.titleBlock}>
           <span className="label">{job.sample ? "Sample job" : photo ? "Photo job" : job.site.county ? `${job.site.county} County, ${job.site.state}` : "Job"}</span>
           <h1 className="title">{job.name}</h1>
+          <SaveStatus sample={job.sample} localSaved={localSaved} hasPhotos={job.photos.some((p) => p.placedBy !== "sample")} />
         </div>
         <nav className={s.tabs} aria-label="Job sections" role="tablist">
           {TABS.map((t, i) => (

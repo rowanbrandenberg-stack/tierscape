@@ -4,11 +4,14 @@ import { DEFAULT_RATES } from "./estimate";
 import { sampleJob } from "./jobs";
 import { buildPublicProposal, canonical, findPrivateKeys, jobOptions, publishReadiness, splitAmounts } from "./proposal";
 import { defaultSettings } from "./settings";
+import { reviewValue, type ReadyKey } from "./readiness";
 import type { Job } from "./types";
 
 const settings = () => {
   const s = defaultSettings();
   s.profile = { ...s.profile, company: "Pine Ridge Landscapes", license: "ROC 123456", email: "office@pineridge.test", phone: "(928) 555 0199" };
+  // The starting crew cost, overhead, license claim and warranty, kept on purpose.
+  s.profile.reviewed = Object.fromEntries((["claim", "crewCost", "overhead", "warranty"] as ReadyKey[]).map((k) => [k, reviewValue(k, s.profile, s.pricing)]));
   return s;
 };
 
@@ -116,6 +119,19 @@ describe("publish readiness", () => {
     expect(publishReadiness(j, s.profile, s.pricing).blockers.join(" ")).toMatch(/preliminary/);
     j.concept!.review = { scopes: true, preliminary: true };
     expect(publishReadiness(j, s.profile, s.pricing).blockers).toEqual([]);
+  });
+
+  it("blocks starting values the contractor has not kept on purpose", () => {
+    const s = settings();
+    s.profile.reviewed = {};
+    const j = photoJob();
+    j.concept!.review = { scopes: true, preliminary: true };
+    const b = publishReadiness(j, s.profile, s.pricing).blockers.join(" ");
+    expect(b).toMatch(/Crew cost/);
+    expect(b).toMatch(/Overhead/);
+    // Changing the crew cost to the contractor's own clears that one.
+    s.pricing.laborRate = 58;
+    expect(publishReadiness(j, s.profile, s.pricing).blockers.join(" ")).not.toMatch(/Crew cost/);
   });
 
   it("blocks placeholder company details and the sample job", () => {

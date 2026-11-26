@@ -30,13 +30,19 @@ export function CloudSync() {
   // First load after sign in: make the company if needed, then merge both ways.
   useEffect(() => {
     const me = useAccount.getState().me;
-    if (!me?.signedIn) return;
+    if (!me?.signedIn) {
+      ready.current = false;
+      useAccount.setState({ cloud: "off", sync: "idle" });
+      return;
+    }
     let stop = false;
+    useAccount.setState({ cloud: "loading" });
     (async () => {
       if (!me.company) {
         const { profile, pricing } = useSettings.getState();
         const r = await fetch("/api/account/bootstrap", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ profile, pricing }) });
-        if (!r.ok || stop) return;
+        if (stop) return;
+        if (!r.ok) return void useAccount.setState({ cloud: "off", syncNote: "Your company account could not be set up, so work is saved in this browser only." });
         await useAccount.getState().refresh();
         return;
       }
@@ -48,6 +54,7 @@ export function CloudSync() {
       for (const j of remote.values()) if (!local[j.id] || j.updatedAt > local[j.id].updatedAt) useJobs.getState().put(j);
       for (const j of Object.values(local)) if (!j.sample && (!remote.has(j.id) || j.updatedAt > remote.get(j.id)!.updatedAt)) pending.current.set(j.id, j);
       ready.current = true;
+      useAccount.setState({ cloud: "ready", sync: pending.current.size ? "pending" : "saved", syncedAt: pending.current.size ? null : Date.now() });
       flushSoon();
     })();
     return () => {
@@ -65,16 +72,23 @@ export function CloudSync() {
     if (!ready.current) return;
     const batch = [...pending.current.values()];
     pending.current.clear();
+    if (!batch.length) return;
+    useAccount.setState({ sync: "saving" });
+    let worst: "saved" | "error" | "offline" = "saved";
     for (const j of batch) {
       const r = await fetch(`/api/jobs/${encodeURIComponent(j.id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(j) }).catch(() => null);
       if (!r) {
         pending.current.set(j.id, j);
+        worst = "offline";
         useAccount.setState({ syncNote: "Offline. Changes are saved on this device and will upload when you reconnect." });
       } else if (!r.ok) {
         const m = (await r.json().catch(() => ({}))) as { message?: string };
+        if (worst === "saved") worst = "error";
         useAccount.setState({ syncNote: m.message ?? "This change was saved on this device only." });
       } else useAccount.setState({ syncNote: null });
     }
+    // Changes made while uploading are queued again, so they are not reported as saved yet.
+    useAccount.setState(worst === "saved" ? { sync: pending.current.size ? "pending" : "saved", syncedAt: Date.now() } : { sync: worst });
     if (pending.current.size) setTimeout(flush, 15_000);
   }
 
@@ -83,7 +97,10 @@ export function CloudSync() {
     const unJobs = useJobs.subscribe((s, prev) => {
       if (!ready.current) return;
       for (const j of Object.values(s.jobs)) if (!j.sample && prev.jobs[j.id] !== j && (!prev.jobs[j.id] || prev.jobs[j.id].updatedAt !== j.updatedAt)) pending.current.set(j.id, j);
-      if (pending.current.size) flushSoon();
+      if (pending.current.size) {
+        if (useAccount.getState().sync !== "saving") useAccount.setState({ sync: "pending" });
+        flushSoon();
+      }
     });
     let st: ReturnType<typeof setTimeout> | null = null;
     const unSet = useSettings.subscribe((s, prev) => {

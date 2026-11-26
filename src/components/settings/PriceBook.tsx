@@ -23,7 +23,7 @@ export function PriceBook() {
   const match = (text: string) => !q.trim() || text.toLowerCase().includes(q.trim().toLowerCase());
 
   return (
-    <section className={s.section} aria-labelledby="prices-h">
+    <section id="prices" className={s.section} aria-labelledby="prices-h">
       <div className={s.aside}>
         <h2 id="prices-h" className="head">Prices</h2>
         <p className="small muted">Set your basics, choose what each tier offers, then price each service the way you already quote it. Open a service only to see what is behind the number.</p>
