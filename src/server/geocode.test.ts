@@ -85,6 +85,10 @@ describe("geocode fallbacks", () => {
     await expect(geocode("1 Nowhere Rd, Flagstaff, AZ")).rejects.toMatchObject({ status: 404 });
   });
 
+  it("asks for the house number when it is missing", async () => {
+    await expect(geocode("E Inwood Way, Flagstaff, AZ 86004")).rejects.toMatchObject({ status: 400 });
+  });
+
   it("says the lookup is down when every provider errors", async () => {
     mockFetch(() => new Error("offline"));
     await expect(geocode("1 Nowhere Rd, Flagstaff, AZ")).rejects.toMatchObject({ status: 502 });

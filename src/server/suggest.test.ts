@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tidySuggestion } from "./suggest";
+import { keepHouseNumber, tidySuggestion } from "./suggest";
 
 describe("tidySuggestion", () => {
   it("matches the address format the rest of the app uses", () => {
@@ -9,5 +9,15 @@ describe("tidySuggestion", () => {
 
   it("leaves text without a state and ZIP alone", () => {
     expect(tidySuggestion("Aspen Ave, Flagstaff, AZ, USA")).toBe("Aspen Ave, Flagstaff, AZ");
+  });
+});
+
+describe("keepHouseNumber", () => {
+  it("puts the typed house number back on a street only suggestion", () => {
+    expect(keepHouseNumber("4663 E Inwood", "E Inwood Way, Flagstaff, AZ 86004")).toBe("4663 E Inwood Way, Flagstaff, AZ 86004");
+  });
+  it("leaves full addresses and number free typing alone", () => {
+    expect(keepHouseNumber("4663 E Inwood", "4663 E Inwood Way, Flagstaff, AZ 86004")).toBe("4663 E Inwood Way, Flagstaff, AZ 86004");
+    expect(keepHouseNumber("Inwood", "E Inwood Way, Flagstaff, AZ 86004")).toBe("E Inwood Way, Flagstaff, AZ 86004");
   });
 });
