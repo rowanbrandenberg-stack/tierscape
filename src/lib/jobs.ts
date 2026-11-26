@@ -1,4 +1,5 @@
 import type { Area, Job, Plant, Pt, Site } from "./types";
+import { emptyConcept } from "./concept";
 
 export const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 
@@ -37,6 +38,18 @@ function base(site: Site, name: string): Job {
 /** A job for a real address, sized to show the whole parcel with some street around it. */
 export function jobFromSite(site: Site): Job {
   return base(site, site.matchedAddress ?? site.address);
+}
+
+/**
+ * A job that starts from a photo of the yard and the homeowner's request.
+ * The address is optional; there is no plan until someone draws one.
+ */
+export function photoJob(request: string, address: string, notes = ""): Job {
+  const a = address.trim();
+  const job = base({ address: a, matchedAddress: null, state: null, county: null, origin: null, extent: { x: 0, y: 0, w: 160, h: 105 }, parcel: null, imagery: null }, a || request.trim().slice(0, 60) || "Photo job");
+  job.kind = "photo";
+  job.concept = { ...emptyConcept(request.trim()), notes: notes.trim() };
+  return job;
 }
 
 /** Fits an extent around a set of points with a margin, at the plan's 3:2 shape. */

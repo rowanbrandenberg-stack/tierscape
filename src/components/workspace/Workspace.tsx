@@ -10,15 +10,22 @@ import { PlanView } from "./PlanView";
 import { TiersView } from "../tiers/TiersView";
 import { ProposalView } from "../proposal/ProposalView";
 import { BuildPack } from "../build/BuildPack";
+import { OptionsView } from "../concept/OptionsView";
 import s from "./Workspace.module.css";
 
-const TABS = [
+const PLAN_TABS = [
   { key: "plan", name: "Plan" },
   { key: "tiers", name: "Tiers" },
   { key: "proposal", name: "Proposal" },
   { key: "build", name: "Build pack" },
 ] as const;
-type Tab = (typeof TABS)[number]["key"];
+/** Photo jobs skip the aerial plan: the three options come from the photo. */
+const PHOTO_TABS = [
+  { key: "options", name: "Options" },
+  { key: "proposal", name: "Proposal" },
+  { key: "build", name: "Build pack" },
+] as const;
+type Tab = (typeof PLAN_TABS)[number]["key"] | (typeof PHOTO_TABS)[number]["key"];
 
 export function Workspace({ id }: { id: string }) {
   const mounted = useMounted();
@@ -26,7 +33,13 @@ export function Workspace({ id }: { id: string }) {
   const save = useJobs((x) => x.save);
   const ed = useEditor();
   const job = ed.job;
-  const [tab, setTab] = useState<Tab>("plan");
+  const [tab, setTab] = useState<Tab>(stored?.kind === "photo" ? "options" : "plan");
+  // The saved job arrives after hydration on a direct load, so put each kind on a tab it has.
+  const kind = stored?.kind === "photo" && stored.concept ? "photo" : stored ? "plan" : null;
+  useEffect(() => {
+    if (kind === "photo" && (tab === "plan" || tab === "tiers")) setTab("options");
+    if (kind === "plan" && tab === "options") setTab("plan");
+  }, [kind, tab]);
   const loaded = useRef<string | null>(null);
 
   // Open the job and bring its photos back from local storage.
@@ -103,12 +116,14 @@ export function Workspace({ id }: { id: string }) {
     );
   }
   if (!job || job.id !== id) return null;
+  const photo = job.kind === "photo" && !!job.concept;
+  const TABS = photo ? PHOTO_TABS : PLAN_TABS;
 
   return (
     <main className={s.main}>
       <div className={`${s.head} no-print`}>
         <div className={s.titleBlock}>
-          <span className="label">{job.sample ? "Sample job" : job.site.county ? `${job.site.county} County, ${job.site.state}` : "Job"}</span>
+          <span className="label">{job.sample ? "Sample job" : photo ? "Photo job" : job.site.county ? `${job.site.county} County, ${job.site.state}` : "Job"}</span>
           <h1 className="title">{job.name}</h1>
         </div>
         <nav className={s.tabs} aria-label="Job sections" role="tablist">
@@ -120,8 +135,9 @@ export function Workspace({ id }: { id: string }) {
           ))}
         </nav>
       </div>
-      {tab === "plan" && <PlanView onNext={() => setTab("tiers")} />}
-      {tab === "tiers" && <TiersView onNext={() => setTab("proposal")} />}
+      {tab === "options" && photo && <OptionsView onNext={() => setTab("proposal")} />}
+      {tab === "plan" && !photo && <PlanView onNext={() => setTab("tiers")} />}
+      {tab === "tiers" && !photo && <TiersView onNext={() => setTab("proposal")} />}
       {tab === "proposal" && <ProposalView onBuild={() => setTab("build")} />}
       {tab === "build" && <BuildPack />}
     </main>

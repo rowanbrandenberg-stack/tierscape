@@ -3,6 +3,8 @@ import { useMounted } from "@/client/useMounted";
 import { ProfileSettings } from "./ProfileSettings";
 import { PriceBook } from "./PriceBook";
 import { Connections } from "./Connections";
+import { EstimatingRules } from "./EstimatingRules";
+import { PaymentsSettings } from "./PaymentsSettings";
 import s from "./settings.module.css";
 
 export function SettingsView() {
@@ -17,6 +19,8 @@ export function SettingsView() {
         <div className={s.sections}>
           <ProfileSettings />
           <PriceBook />
+          <EstimatingRules />
+          <PaymentsSettings />
           <Connections />
         </div>
       )}

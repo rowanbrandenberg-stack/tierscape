@@ -1,4 +1,4 @@
-import { NewJob } from "@/components/home/NewJob";
+import { StartJob } from "@/components/home/StartJob";
 import { JobList } from "@/components/home/JobList";
 import { ExampleCard } from "@/components/home/ExampleCard";
 import s from "./home.module.css";
@@ -8,16 +8,18 @@ export default function Home() {
     <main className="page">
       <div className={s.top}>
         <section className={s.hero}>
-          <p className="label">Plan, price and propose</p>
+          <p className="label">Landscape proposals that close</p>
           <h1 className="display">
-            Start with the address. Leave with a signed plan.
+            Turn a yard photo into three priced options and a signed deposit.
           </h1>
           <p className="lede">
-            Tierscape pulls the aerial and the property line, lets you trace the
-            work to scale, prices it three ways and hands your crew the build
-            pack. Mark the dig and the 811 request is ready to go.
+            Snap the yard and note what the client asked for. Tierscape drafts
+            affordable, standard and premium scopes from your own rates, with
+            concept pictures. You check the numbers, send one link, and the
+            client picks, signs and pays the deposit. No photo? Start from the
+            address and measure on the aerial.
           </p>
-          <NewJob />
+          <StartJob />
         </section>
         <ExampleCard />
       </div>

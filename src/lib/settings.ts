@@ -1,5 +1,6 @@
 import { DEFAULT_BORDERS, DEFAULT_PLANT_SIZES, DEFAULT_SERVICES, DEFAULT_TIER_MAP, type Border, type PlantSizeRow, type Service, type TierMap } from "./catalog";
 import type { BorderKey, PlantKind, TierKey } from "./types";
+import { DEFAULT_RATES, type RateRule } from "./estimate";
 
 export interface Profile {
   company: string;
@@ -14,6 +15,8 @@ export interface Profile {
   logo: string | null;
   /** The warranty the homeowner agrees to. Reviewed before any proposal is shared. */
   warranty: string;
+  /** How you work: base depths you insist on, what you will not do, how you price. Guides drafted proposals. */
+  experience?: string;
 }
 
 export const DEFAULT_WARRANTY =
@@ -42,6 +45,10 @@ export interface Pricing {
   tierMap: TierMap;
   borders: Record<Exclude<BorderKey, "none">, Border>;
   plantSizes: Record<PlantKind, Record<TierKey, PlantSizeRow>>;
+  /** Reusable unit costs and production rates for photo-first estimates. Older settings lack it. */
+  rates?: RateRule[];
+  /** Deposit taken at signing on split terms, percent of the accepted price. */
+  depositPct?: number;
 }
 
 export interface Settings {
@@ -62,6 +69,7 @@ export function defaultSettings(): Settings {
       accentColor: "#b8662e",
       logo: null,
       warranty: DEFAULT_WARRANTY,
+      experience: "",
     },
     pricing: {
       laborRate: 65,
@@ -73,6 +81,14 @@ export function defaultSettings(): Settings {
       tierMap: structuredClone(DEFAULT_TIER_MAP),
       borders: structuredClone(DEFAULT_BORDERS),
       plantSizes: structuredClone(DEFAULT_PLANT_SIZES),
+      rates: structuredClone(DEFAULT_RATES),
+      depositPct: 50,
     },
   };
 }
+
+export const ratesOf = (p: Pricing): RateRule[] => (Array.isArray(p.rates) ? p.rates : structuredClone(DEFAULT_RATES));
+export const depositPctOf = (p: Pricing): number => {
+  const n = Number(p.depositPct ?? 50);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 50;
+};

@@ -5,8 +5,8 @@ import s from "./settings.module.css";
 const ROWS = [
   { key: "imagery", name: "Aerial imagery", on: "Loads automatically for every address." },
   { key: "regrid", name: "Parcel lines outside Arizona", on: "Nationwide parcel lines through Regrid." },
-  { key: "claude", name: "AI assist", on: "Sizes plants for the location, places site photos, finds likely utilities and traces locator paint." },
-  { key: "render", name: "Photo renders", on: "Each tier rendered from the homeowner's own photo." },
+  { key: "claude", name: "AI drafting", on: "Drafts three options from a yard photo, sizes plants for the location, places site photos, finds likely utilities and traces locator paint." },
+  { key: "render", name: "Concept pictures", on: "Each option pictured from the client's own photo, labelled as a concept." },
   { key: "onecall", name: "Direct 811 submission", on: "Locate requests go straight to the one call center." },
 ] as const;
 

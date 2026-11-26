@@ -5,7 +5,8 @@ import { useJobs } from "@/client/jobsStore";
 import { useMounted } from "@/client/useMounted";
 import { useSettings } from "@/client/settingsStore";
 import { sampleJob } from "@/lib/jobs";
-import { money, quote } from "@/lib/pricing";
+import { money } from "@/lib/pricing";
+import { isPhotoJob, jobOptions } from "@/lib/proposal";
 import s from "./home.module.css";
 
 export function JobList() {
@@ -35,15 +36,17 @@ export function JobList() {
       ) : (
         <ul className={s.grid}>
           {list.map((j) => {
-            const q = quote(j, pricing, "standard");
+            const photo = isPhotoJob(j);
+            const std = jobOptions(j, pricing).find((o) => o.tier === "standard");
+            const measured = photo ? (j.concept?.options.length ?? 0) > 0 : j.areas.length > 0;
             return (
               <li key={j.id} className={s.card}>
                 <Link href={`/jobs/${j.id}`} className={s.cardLink}>
-                  <span className="label">{j.sample ? "Sample" : j.site.county ? `${j.site.county} County, ${j.site.state}` : j.site.state ?? "Job"}</span>
+                  <span className="label">{j.sample ? "Sample" : photo ? "From a photo" : j.site.county ? `${j.site.county} County, ${j.site.state}` : j.site.state ?? "Job"}</span>
                   <span className={s.cardTitle}>{j.name}</span>
                   <span className={s.cardMeta}>
-                    <span>{j.areas.length} {j.areas.length === 1 ? "area" : "areas"}</span>
-                    <span className="num">{j.areas.length ? `${money(q.price)} standard` : "Not measured"}</span>
+                    <span>{photo ? (j.concept?.request ?? "").slice(0, 40) : `${j.areas.length} ${j.areas.length === 1 ? "area" : "areas"}`}</span>
+                    <span className="num">{measured && std ? `${money(std.price)} standard` : photo ? "Not drafted" : "Not measured"}</span>
                   </span>
                 </Link>
                 <button className={s.del} onClick={() => remove(j.id)} aria-label={`Delete ${j.name}`}>Delete</button>

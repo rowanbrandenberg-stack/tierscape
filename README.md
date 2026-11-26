@@ -1,5 +1,10 @@
 # Tierscape
 
+Start from a yard photo and the client's request, or from an address. Tierscape
+drafts three priced options from your own rates, sends one branded link, and the
+client picks, signs and pays the deposit. See
+[docs/photo-proposals-and-payments.md](docs/photo-proposals-and-payments.md).
+
 Plan a landscape job from an address. Tierscape finds the lot, draws the property
 line, lets you trace the work to scale, prices it three ways, writes a branded
 proposal the homeowner signs, hands the crew a build pack, and prepares the 811
@@ -33,8 +38,9 @@ Node 20 or newer.
 | --- | --- |
 | Sharper imagery made for contractor measuring | `IMAGERY_PROVIDER=nearmap`, `NEARMAP_API_KEY` |
 | Parcel lines outside Arizona | `REGRID_API_TOKEN` |
-| Plant growth estimates for the job's climate, and finding where a site photo was taken | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
-| Photoreal tier renders from the homeowner's photo | `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL` |
+| Three options drafted from a yard photo, plant growth estimates, finding where a site photo was taken | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
+| Concept pictures from the homeowner's photo | `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL` |
+| Client deposits and balances to the contractor (Stripe Connect) | `STRIPE_SECRET_KEY`, `STRIPE_CONNECT_WEBHOOK_SECRET` |
 | Direct 811 submission | `ONECALL_PROVIDER`, `ONECALL_API_URL`, `ONECALL_API_KEY` |
 
 Settings shows which of these are live.

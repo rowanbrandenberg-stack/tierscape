@@ -22,6 +22,8 @@ export interface Group {
   steps: string[];
   /** Extra costs the homeowner sees by name. */
   customerItems?: string[];
+  /** This group's share of the price before rounding, overhead and margin included. Used to split the total for the homeowner. */
+  sell: number;
 }
 
 export interface Quote {
@@ -65,6 +67,7 @@ export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pr
   let fixedPrice = 0;
   let markedMaterials = 0;
   let markedHours = 0;
+  const sellK = (1 + (pricing.overheadPct ?? 0) / 100) * (1 + pricing.markupPct / 100);
 
   for (const type of Object.keys(AREA_TYPES) as AreaType[]) {
     const areas = job.areas.filter((a) => a.type === type);
@@ -138,6 +141,13 @@ export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pr
     });
     const gMat = lines.reduce((s, l) => s + l.cost, 0);
     const bMat = bLines.reduce((s, l) => s + l.cost, 0);
+    const typeFixed = svc.installedPrice > 0 ? areas.reduce((acc, a) => {
+      const layout = LAYOUTS[a.paver.layout];
+      const size = SIZES[a.paver.size];
+      const laborMult = isPaver ? layout.labor * (a.paver.layout === "ashlar" ? 1 : size.labor) : 1;
+      return acc + areaSqft(a) * svc.installedPrice * (1 + (laborMult - 1) * 0.6);
+    }, 0) : 0;
+    const groupBuilt = bMat + borderHours * pricing.laborRate + (svc.installedPrice > 0 ? 0 : gMat + h * pricing.laborRate);
     materials += gMat + bMat;
     hours += h + borderHours;
     markedMaterials += bMat;
@@ -159,6 +169,7 @@ export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pr
       lines: [...lines, ...bLines],
       hours: h + borderHours,
       steps: [...svc.steps, ...borderNames.map((n) => `Install the ${n.toLowerCase()} along the marked lawn edges`)],
+      sell: typeFixed + groupBuilt * sellK,
     });
   }
 
@@ -187,7 +198,7 @@ export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pr
     hours += h;
     markedMaterials += m;
     markedHours += h;
-    groups.push({ kind: "plants", title: `Plant installation: ${count} plants (${kinds.join(", ")})`, sqft: 0, plantCount: count, lines, hours: h, steps });
+    groups.push({ kind: "plants", title: `Plant installation: ${count} plants (${kinds.join(", ")})`, sqft: 0, plantCount: count, lines, hours: h, steps, sell: (m + h * pricing.laborRate) * sellK });
   }
 
   const extras = (job.extras ?? []).filter((e) => e.tiers.includes(tier) && e.qty > 0);
@@ -210,7 +221,7 @@ export function quote(job: Pick<Job, "areas" | "plants" | "extras">, pricing: Pr
     markedMaterials += m;
     markedHours += h;
     const shown = extras.filter((e) => e.showCustomer && e.description.trim()).map((e) => e.description.trim());
-    groups.push({ kind: "extras", title: shown.length ? `Also included: ${shown.join(", ")}` : "Site work and job costs", sqft: 0, plantCount: 0, lines, hours: h, steps: [], customerItems: shown });
+    groups.push({ kind: "extras", title: shown.length ? `Also included: ${shown.join(", ")}` : "Site work and job costs", sqft: 0, plantCount: 0, lines, hours: h, steps: [], customerItems: shown, sell: (m + h * pricing.laborRate) * sellK });
   }
 
   const labor = hours * pricing.laborRate;
