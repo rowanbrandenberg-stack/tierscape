@@ -25,7 +25,10 @@ Both produce the same `PublicProposal` snapshot (`src/lib/proposal.ts`), the sam
 - Claude (`src/server/anthropic.ts`, official SDK) with structured output validated by zod, adaptive thinking, and the server-side refusal fallback (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`).
 - Concept pictures: OpenAI `POST /v1/images/edits` with the original photo and instructions that keep the viewpoint, house and surroundings. Labelled "Concept image" everywhere.
 - Every call is a durable row in `ai_generations` keyed by a client request key: repeat clicks reuse it, failed runs retry up to 3 times, runs that die are marked failed after 6 minutes, and the browser resumes polling after a reload.
-- Cost controls: signed in office users with a plan or trial that includes three option proposals; drafts capped per company per day (`AI_DRAFTS_PER_DAY`); concept pictures count against the plan's image allowance (reserved, then confirmed or refunded). The planner's `/api/render` and the older Claude routes now require a signed in company too.
+- Cost controls: every route that spends the Anthropic or OpenAI key needs a signed in company (401) whose trial or plan allows creating work (402). Drafting from a photo also needs an office role and a plan with three option proposals.
+- Claude calls (drafts, option rewrites, plant sizes, photo placement, utility clues and traces) share one cap per company per UTC day in `usage_ledger` (window `ai:YYYY-MM-DD`): 40 on paid plans, 10 in the trial. A call holds its place while it runs, stays counted only if it succeeds, and is refunded if it fails; past the cap the answer is 429.
+- Pictures (planner renders and concept pictures) use the plan's image allowance: trial 3 in total, Pro 30 a month, Team 90 a month, reserved first and then confirmed or refunded.
+- The keys are read only on the server (`src/server/config.ts`); nothing sends them to the browser, and a test checks that no client code or `NEXT_PUBLIC_` variable names them.
 - With keys missing, `/api/ai/status` lists exactly what is missing and the buttons stay off.
 
 ## Photos

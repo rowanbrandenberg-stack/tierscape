@@ -17,10 +17,6 @@ export const config = {
   anthropic: { key: env("ANTHROPIC_API_KEY"), model: env("ANTHROPIC_MODEL") || "claude-opus-5-5" },
   // gpt-image-1 was shut down by OpenAI on 2026-10-23, so it is no longer a usable default.
   render: { provider: env("RENDER_PROVIDER") || "openai", openaiKey: env("OPENAI_API_KEY"), model: retiredImageModel(env("OPENAI_IMAGE_MODEL")) ? "gpt-image-2.6-sunburst" : env("OPENAI_IMAGE_MODEL") || "gpt-image-2.6-sunburst" },
-  ai: {
-    /** Drafts and option rewrites per company per day. */
-    draftsPerDay: Math.max(0, Number(env("AI_DRAFTS_PER_DAY") || 20)) || 0,
-  },
   onecall: { provider: env("ONECALL_PROVIDER"), url: env("ONECALL_API_URL"), key: env("ONECALL_API_KEY") },
 };
 

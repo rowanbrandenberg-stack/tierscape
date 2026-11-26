@@ -4,8 +4,6 @@ import type * as z from "zod/v4";
 import { parseJsonReply } from "@/lib/prompts";
 import { config } from "./config";
 import { ProviderError } from "./http";
-import { accountsReady } from "./accounts";
-import { companyAccess } from "./companyAccess";
 
 /**
  * Claude over the official SDK. The key stays on the server. Every call
@@ -71,12 +69,8 @@ export async function claudeStructured<S extends z.ZodType>(o: { system: string;
 
 /** The older free form JSON calls (plant sizes, photo placement, utility clues). */
 export async function claudeJson<T>(content: Block[], maxTokens = 1200): Promise<T> {
+  // Callers go through aiGate (src/server/aiQuota.ts): signed in company, plan or trial, daily cap.
   const c = sdk();
-  // These routes spend the server's key, so once accounts are live only a company with a plan or trial may call them.
-  if (accountsReady().ok) {
-    const { a } = await companyAccess();
-    if (!a.canCreate) throw new ProviderError(a.notice ?? "Start the free trial or choose a plan to use AI assist.", 402, "no_plan");
-  }
   let text = "";
   try {
     const r = await c.messages.create({ model: config.anthropic.model, max_tokens: Math.max(maxTokens, 4000), output_config: { effort: "low" }, messages: [{ role: "user", content }] });

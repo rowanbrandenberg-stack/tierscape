@@ -288,6 +288,34 @@ export async function imagesUsed(store: Store, companyId: string, window: string
   return (await store.usage(companyId, window)).filter((e) => e.state !== "refunded").reduce((n, e) => n + e.units, 0);
 }
 
+/* ---------- metered AI text calls ---------- */
+
+/** Claude calls per company per UTC day. Paid plans (also while a payment is late) and the trial. */
+export const AI_TEXT_PER_DAY = { paid: 40, trial: 10 } as const;
+
+export function aiTextLimit(a: Access): number {
+  if (!a.canCreate) return 0;
+  if (a.mode === "trial") return AI_TEXT_PER_DAY.trial;
+  return a.mode === "paid" || a.mode === "grace" ? AI_TEXT_PER_DAY.paid : 0;
+}
+
+/** One window per UTC day, kept apart from the image windows in the same ledger. */
+export const aiWindow = (now: number) => `ai:${new Date(now).toISOString().slice(0, 10)}`;
+
+/**
+ * Reserve one call before it runs, confirm it when it succeeds, refund it
+ * when it fails. A call in flight holds its place so parallel requests
+ * cannot go over the limit; only confirmed calls stay counted.
+ */
+export async function reserveAiCall(store: Store, companyId: string, a: Access, key: string, now: number): Promise<{ ok: true } | { ok: false; reason: string; status: 402 | 429 }> {
+  const limit = aiTextLimit(a);
+  if (limit <= 0) return { ok: false, reason: a.notice ?? "Start the free trial or choose a plan to use AI assist.", status: 402 };
+  const ok = await store.reserveUsage({ key, companyId, window: aiWindow(now), units: 1, state: "pending" }, limit);
+  return ok ? { ok: true } : { ok: false, reason: `Your company has used today's ${limit} AI assists. More open tomorrow (midnight UTC).`, status: 429 };
+}
+export const confirmAiCall = (store: Store, key: string) => store.setUsageState(key, "used");
+export const refundAiCall = (store: Store, key: string) => store.setUsageState(key, "refunded");
+
 /* ---------- explaining a change before it happens ---------- */
 
 export interface ChangePlan {

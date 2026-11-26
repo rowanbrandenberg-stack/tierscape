@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   let store: ReturnType<typeof dbStore> | null = null;
   try {
     const { s, a } = await companyAccess();
+    if (!a.canCreate) throw new ProviderError(a.notice ?? "Start the free trial or choose a plan to make concept pictures.", 402, "no_plan");
     store = dbStore();
     const fd = await req.formData();
     const photo = fd.get("photo");

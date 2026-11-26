@@ -4,6 +4,7 @@ import { adoptDraft, adoptOption, conceptRenderPrompt, DRAFT_SYSTEM, DraftSchema
 import { ratesOf } from "@/lib/settings";
 import type { Job, TierKey } from "@/lib/types";
 import { companySettings, assertDraftable } from "./aiGate";
+import { holdAiCall } from "./aiQuota";
 import { bytesToBlock, claudeStructured } from "./anthropic";
 import { getAsset, putAsset } from "./assets";
 import { dbStore } from "./billingStore";
@@ -86,35 +87,60 @@ export async function startGeneration(kind: GenKind, s: CompanySession, a: Acces
   if (kind !== "draft" && !tier) throw new ProviderError("Pick an option.", 400, "bad_request");
   const photo = await photoFor(s.company.id, jobId, concept.photoId);
 
-  const { row, run } = await claimGeneration({ companyId: s.company.id, jobId, kind, tier, requestKey: str(body.requestKey, 120) });
-  if (!run) return publicGen(row);
+  // Drafts and option rewrites are Claude calls: hold one from today's cap before queuing, so a full cap answers 429 now.
+  const hold = kind === "render" ? null : await holdAiCall(s.company.id, a);
+  let claimed: Awaited<ReturnType<typeof claimGeneration>>;
+  try {
+    claimed = await claimGeneration({ companyId: s.company.id, jobId, kind, tier, requestKey: str(body.requestKey, 120) });
+  } catch (e) {
+    await hold?.refund();
+    throw e;
+  }
+  const { row, run } = claimed;
+  if (!run) {
+    // A repeat click joined the run already going: it is not a second call.
+    await hold?.refund();
+    return publicGen(row);
+  }
 
   const store = dbStore();
   const companyId = s.company.id;
+  const theJob = job;
+  const work = async (): Promise<{ result: unknown; model: string }> => {
+    const { ctx, rates } = await context(companyId, theJob, concept);
+    if (kind === "draft") {
+      const out = await claudeStructured({ system: DRAFT_SYSTEM, content: [bytesToBlock(photo.bytes, photo.row.content_type), { type: "text", text: draftPrompt(ctx) }], schema: DraftSchema, maxTokens: 24_000 });
+      return { result: { concept: adoptDraft(out.value, concept, rates, out.model) }, model: out.model };
+    }
+    if (kind === "option") {
+      const out = await claudeStructured({ system: DRAFT_SYSTEM, content: [bytesToBlock(photo.bytes, photo.row.content_type), { type: "text", text: optionPrompt(ctx, concept, tier!, str(body.instruction, 800)) }], schema: OptionSchema, maxTokens: 12_000 });
+      return { result: { option: { ...adoptOption(out.value, tier!, rates), source: "ai" } }, model: out.model };
+    }
+    // render: one image from the allowance, refunded if it fails.
+    const option = concept.options.find((o) => o.tier === tier);
+    if (!option?.visual?.change) throw new ProviderError("This option has no visual description yet. Draft it first.", 400, "no_visual");
+    const usageKey = `render:${row.id}:${row.attempts}`;
+    const res = await reserveImages(store, companyId, a, usageKey, 1);
+    if (!res.ok) throw new ProviderError(res.reason, 402, "no_allowance");
+    try {
+      const img = await editImage(photo.bytes, photo.row.content_type, conceptRenderPrompt(option, concept.request), companyId);
+      const asset = await putAsset({ id: `rd_${crypto.randomUUID()}`, companyId, jobId, kind: "render", tier, bytes: img.bytes });
+      await confirmImages(store, usageKey);
+      return { result: { tier, render: { assetId: asset.id, createdAt: new Date().toISOString(), model: img.model } }, model: img.model };
+    } catch (e) {
+      await refundImages(store, usageKey).catch(() => undefined);
+      throw e;
+    }
+  };
   after(() =>
     runGeneration(row, async () => {
-      const { ctx, rates } = await context(companyId, job, concept);
-      if (kind === "draft") {
-        const out = await claudeStructured({ system: DRAFT_SYSTEM, content: [bytesToBlock(photo.bytes, photo.row.content_type), { type: "text", text: draftPrompt(ctx) }], schema: DraftSchema, maxTokens: 24_000 });
-        return { result: { concept: adoptDraft(out.value, concept, rates, out.model) }, model: out.model };
-      }
-      if (kind === "option") {
-        const out = await claudeStructured({ system: DRAFT_SYSTEM, content: [bytesToBlock(photo.bytes, photo.row.content_type), { type: "text", text: optionPrompt(ctx, concept, tier!, str(body.instruction, 800)) }], schema: OptionSchema, maxTokens: 12_000 });
-        return { result: { option: { ...adoptOption(out.value, tier!, rates), source: "ai" } }, model: out.model };
-      }
-      // render: one image from the allowance, refunded if it fails.
-      const option = concept.options.find((o) => o.tier === tier);
-      if (!option?.visual?.change) throw new ProviderError("This option has no visual description yet. Draft it first.", 400, "no_visual");
-      const usageKey = `render:${row.id}:${row.attempts}`;
-      const res = await reserveImages(store, companyId, a, usageKey, 1);
-      if (!res.ok) throw new ProviderError(res.reason, 402, "no_allowance");
+      if (!hold) return work();
       try {
-        const img = await editImage(photo.bytes, photo.row.content_type, conceptRenderPrompt(option, concept.request), companyId);
-        const asset = await putAsset({ id: `rd_${crypto.randomUUID()}`, companyId, jobId, kind: "render", tier, bytes: img.bytes });
-        await confirmImages(store, usageKey);
-        return { result: { tier, render: { assetId: asset.id, createdAt: new Date().toISOString(), model: img.model } }, model: img.model };
+        const out = await work();
+        await hold.confirm();
+        return out;
       } catch (e) {
-        await refundImages(store, usageKey).catch(() => undefined);
+        await hold.refund();
         throw e;
       }
     }),

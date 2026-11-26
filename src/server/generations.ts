@@ -1,4 +1,3 @@
-import { config } from "./config";
 import { ProviderError } from "./http";
 import { adminDb } from "./supabase";
 
@@ -69,11 +68,6 @@ export async function claimGeneration(o: { companyId: string; jobId: string; kin
       .maybeSingle();
     if (r.error) throw new Error(r.error.message);
     return r.data ? { row: r.data as GenRow, run: true } : { row, run: false };
-  }
-  if (o.kind !== "render" && config.ai.draftsPerDay > 0) {
-    const since = new Date(Date.now() - 864e5).toISOString();
-    const c = await db.from("ai_generations").select("id", { count: "exact", head: true }).eq("company_id", o.companyId).in("kind", ["draft", "option"]).gte("created_at", since);
-    if ((c.count ?? 0) >= config.ai.draftsPerDay) throw new ProviderError(`Your company has used today's ${config.ai.draftsPerDay} drafts. More open tomorrow.`, 429, "daily_limit");
   }
   const ins = await db
     .from("ai_generations")
